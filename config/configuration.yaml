@@ -12,13 +12,17 @@ homeassistant:
   currency: EUR
   country: RO
   time_zone: Europe/Bucharest
+  # Published by TrueHL's Caddy (core/Caddyfile, section 7).
+  external_url: https://home.erzago.duckdns.org
+  internal_url: http://homeassistant:8123
   packages: !include_dir_named packages
 
 # The container sits behind the TrueHL reverse proxy on proxy-network.
 http:
   use_x_forwarded_for: true
   trusted_proxies:
-    - 172.16.0.0/12
+    # proxy-network subnet — this is where Caddy reaches the container from.
+    - 172.18.0.0/16
     - 127.0.0.1
   ip_ban_enabled: true
   login_attempts_threshold: 5
