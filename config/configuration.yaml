@@ -14,18 +14,16 @@ homeassistant:
   time_zone: Europe/Bucharest
   # Published by TrueHL's Caddy (core/Caddyfile, section 7).
   external_url: https://home.erzago.duckdns.org
-  internal_url: http://homeassistant:8123
+  internal_url: http://127.0.0.1:8123
   packages: !include_dir_named packages
 
-# The container sits behind the TrueHL reverse proxy on proxy-network.
-http:
-  use_x_forwarded_for: true
-  trusted_proxies:
-    # proxy-network subnet — this is where Caddy reaches the container from.
-    - 172.18.0.0/16
-    - 127.0.0.1
-  ip_ban_enabled: true
-  login_attempts_threshold: 5
+# HTTP settings are NOT configured here. Home Assistant migrated the http:
+# block into UI-managed storage (config/.storage/http); a YAML block is ignored
+# and stops being accepted in 2027.2.0. Manage it in
+# Settings > System > Network instead.
+#
+# Required for this deployment: trusted proxy 172.18.0.0/16 (the proxy-network
+# subnet Caddy reaches us from). Without it every proxied request gets 400.
 
 recorder:
   db_url: !secret recorder_db_url

@@ -14,12 +14,20 @@ services:
     volumes:
       - ./config:/config
       - /run/dbus:/run/dbus:ro
-    ports:
-      - 127.0.0.1:8123:8123
+    # Bluetooth needs the HOST network namespace, not just the D-Bus socket:
+    # PF_BLUETOOTH sockets are scoped per network namespace, so a bridged
+    # container reports "degraded mode" and cannot reach hci0. Host networking
+    # also restores mDNS/zeroconf discovery (ESPHome, Chromecast, Shelly).
+    #
+    # Consequence: 8123 binds on ALL host interfaces, not 127.0.0.1 as the rest
+    # of the estate does. Home Assistant's own auth is the only gate on the LAN.
+    # Caddy reaches it at the proxy-network gateway (the host), 172.18.0.1:8123.
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     depends_on:
       - mosquitto
-    networks:
-      - proxy-network
 
   mosquitto:
     image: eclipse-mosquitto:2
