@@ -1,0 +1,14 @@
+# One automation per file in this directory; they merge into a single list.
+- id: sunset_notify
+  alias: Notify at sunset
+  description: Placeholder automation. Delete once real ones exist.
+  mode: single
+  triggers:
+    - trigger: sun
+      event: sunset
+      offset: "-00:15:00"
+  actions:
+    - action: persistent_notification.create
+      data:
+        title: Sunset
+        message: The sun sets in 15 minutes.

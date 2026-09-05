@@ -1,0 +1,44 @@
+# Compose project name, pinned so the stack is managed from any path.
+# Without it the name is inferred from the directory, so a bare `docker compose up`
+# from another path creates a SECOND set of containers instead of managing these.
+name: homeassistant
+
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    mem_limit: 2g
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-Europe/Bucharest}
+    volumes:
+      - ./config:/config
+      - /run/dbus:/run/dbus:ro
+    ports:
+      - 127.0.0.1:8123:8123
+    depends_on:
+      - mosquitto
+    networks:
+      - proxy-network
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    mem_limit: 256m
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    ports:
+      - 127.0.0.1:1883:1883
+    networks:
+      - proxy-network
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+
+networks:
+  proxy-network:
+    external: true

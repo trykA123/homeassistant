@@ -1,0 +1,26 @@
+# Secrets and local env
+.env
+config/secrets.yaml
+mosquitto/config/passwd
+
+# Home Assistant runtime state
+config/.storage/
+config/.cloud/
+config/.google.token
+config/*.db
+config/*.db-shm
+config/*.db-wal
+config/*.log
+config/*.log.*
+config/home-assistant_v2.db*
+config/home-assistant.log*
+config/tts/
+config/deps/
+config/backups/
+config/image/
+config/.HA_VERSION
+config/.uuid
+
+# Editors / OS
+.DS_Store
+*.swp

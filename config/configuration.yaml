@@ -1,0 +1,47 @@
+# Home Assistant main configuration.
+# Anything secret goes in secrets.yaml (git-ignored); reference it with !secret.
+
+default_config:
+
+homeassistant:
+  name: !secret home_name
+  latitude: !secret home_latitude
+  longitude: !secret home_longitude
+  elevation: !secret home_elevation
+  unit_system: metric
+  currency: EUR
+  country: RO
+  time_zone: Europe/Bucharest
+  packages: !include_dir_named packages
+
+# The container sits behind the TrueHL reverse proxy on proxy-network.
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 172.16.0.0/12
+    - 127.0.0.1
+  ip_ban_enabled: true
+  login_attempts_threshold: 5
+
+recorder:
+  db_url: !secret recorder_db_url
+  purge_keep_days: 30
+  commit_interval: 5
+  exclude:
+    domains:
+      - automation
+      - update
+    entity_globs:
+      - sensor.*_uptime
+
+logger:
+  default: warning
+  logs:
+    homeassistant.components.mqtt: info
+
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include_dir_merge_list automations
+script: !include scripts.yaml
+scene: !include scenes.yaml
