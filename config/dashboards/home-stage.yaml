@@ -1,0 +1,86 @@
+kiosk_mode:
+  hide_header: true
+views:
+  - title: Home
+    path: home
+    panel: true
+    theme: Harbour
+    cards:
+      - type: custom:stage-card
+        title: Stage
+        person: person.claud
+        weather: weather.forecast_home
+        scenes:
+          - entity: scene.evening
+            name: Evening
+            swatch: "linear-gradient(135deg, oklch(82% .12 60), oklch(65% .14 35))"
+          - entity: scene.relax
+            name: Relax
+            swatch: "linear-gradient(135deg, oklch(78% .1 20), oklch(60% .12 350))"
+          - entity: script.movie_time
+            name: Movie time
+            swatch: "linear-gradient(135deg, oklch(65% .12 240), oklch(45% .12 280))"
+          - entity: scene.night
+            name: Night
+            swatch: "linear-gradient(135deg, oklch(45% .08 270), oklch(25% .05 270))"
+          - entity: script.all_off
+            name: All off
+            swatch: "oklch(30% 0 0)"
+        tv:
+          entity: media_player.tv
+          remote: remote.tv
+          app_source: media_player.tv_3
+          apps:
+            - name: Wholphin
+              id: com.github.damontecres.wholphin.MainActivity-com.github.damontecres.wholphin
+            - name: YouTube
+              id: com.google.android.apps.youtube.tv.activity.ShellActivity-com.google.android.youtube.tv
+            - name: Moonfin
+              id: org.moonfin.androidtv.MainActivity-org.moonfin.androidtv
+            - name: Jellyfin
+              id: org.jellyfin.androidtv.ui.startup.StartupActivity-org.jellyfin.androidtv
+        energy:
+          name: Desk energy
+          switch_name: Desk plug
+          switch: switch.birou
+          power: sensor.birou_current_consumption
+          today: sensor.birou_today_s_consumption
+          today_cost: sensor.desk_cost_today
+          month_cost: sensor.desk_cost_month
+        vacuum:
+          entity: vacuum.clea_ning
+          battery: sensor.clea_ning_battery
+          filter: sensor.clea_ning_filter_life
+        rooms:
+          - id: living
+            name: Living room
+            photo: /local/stage/living.jpg?v=1
+            weather: true
+            tv: true
+            chips:
+              - entity: sensor.birou_current_consumption
+                icon: mdi:power-plug-outline
+            lights:
+              - entity: light.light_1
+                icon: mdi:ceiling-light-outline
+              - entity: light.light_2
+                icon: mdi:ceiling-light-outline
+              - entity: light.h619a
+                icon: mdi:led-strip-variant
+              - entity: light.tv_ambilight
+                icon: mdi:television-ambient-light
+              - entity: light.bedside_lamp
+                icon: mdi:lamp-outline
+            sections: [scenes, now_playing, energy, vacuum]
+          - id: bedroom
+            name: Bedroom
+            photo: /local/stage/bedroom.jpg?v=1
+            photo_position: "12% 0"
+            fan: fan.bedroom_fan
+            chips:
+              - entity: sensor.bedroom_temperature
+                icon: mdi:thermometer
+              - entity: sensor.bedroom_humidity
+                icon: mdi:water-percent
+            offline_note: Govee sensor offline
+            sections: [scenes]
