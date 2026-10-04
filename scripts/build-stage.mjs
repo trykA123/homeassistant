@@ -6,12 +6,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const ORDER = ["stage-model.js", "stage-chart.js", "stage-styles.js", "stage-gestures.js", "stage-views.js", "stage-card.js"];
+const ORDER = ["stage-model.js", "stage-morph.js", "stage-chart.js", "stage-styles.js", "stage-gestures.js", "stage-views.js", "stage-sheets.js", "stage-lights.js", "stage-card.js"];
 
 const strip = (code, file) =>
   `// ${file}\n` +
   code
     .replace(/^import [^;]+;\n/gm, "")
+    .replace(/^export \{[^}]*\};\n/gm, "")
     .replace(/^export (const|function|class|async function) /gm, "$1 ");
 
 const body = ORDER.map((f) => strip(readFileSync(join(root, "stage-card/src", f), "utf8"), f)).join("\n");

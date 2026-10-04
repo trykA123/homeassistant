@@ -12,6 +12,22 @@ const APP_NAMES = {
 
 const isOn = (stateObj) => stateObj?.state === 'on';
 
+const COLOR_MODES = ['hs', 'rgb', 'rgbw', 'rgbww', 'xy'];
+
+function lightCapabilities(attributes) {
+  const modes = attributes.supported_color_modes ?? [];
+  return {
+    color: modes.some((m) => COLOR_MODES.includes(m)),
+    temperature: modes.includes('color_temp'),
+    dimmable: modes.some((m) => m !== 'onoff'),
+    minKelvin: attributes.min_color_temp_kelvin ?? 2200,
+    maxKelvin: attributes.max_color_temp_kelvin ?? 6500,
+  };
+}
+
+const kelvinToPercent = (k, min, max) => Math.round(((k - min) / (max - min)) * 100);
+const percentToKelvin = (p, min, max) => Math.round((min + (p / 100) * (max - min)) / 50) * 50;
+
 function lightView(stateObj, pending) {
   const id = stateObj.entity_id;
   const brightness = stateObj.attributes.brightness;
@@ -24,6 +40,9 @@ function lightView(stateObj, pending) {
     level: on ? level : 0,
     lastLevel: level || 50,
     unavailable: stateObj.state === 'unavailable',
+    rgb: stateObj.attributes.rgb_color ?? null,
+    kelvin: stateObj.attributes.color_temp_kelvin ?? null,
+    caps: lightCapabilities(stateObj.attributes),
   };
 }
 
@@ -81,6 +100,69 @@ function bucketSeries(series, { now = Date.now(), hours = 24, buckets = 96 } = {
     out.push({ t: end, v: count ? sum / count : last });
   }
   return out;
+}
+
+const SWATCHES = [
+  { name: 'Candle', kelvin: 2200 },
+  { name: 'Warm', kelvin: 2700 },
+  { name: 'Neutral', kelvin: 4000 },
+  { name: 'Daylight', kelvin: 6000 },
+  { name: 'Amber', rgb: [255, 150, 40] },
+  { name: 'Coral', rgb: [255, 90, 80] },
+  { name: 'Rose', rgb: [255, 70, 140] },
+  { name: 'Violet', rgb: [140, 80, 255] },
+  { name: 'Blue', rgb: [50, 110, 255] },
+  { name: 'Cyan', rgb: [30, 200, 255] },
+  { name: 'Mint', rgb: [40, 230, 160] },
+  { name: 'Green', rgb: [90, 220, 60] },
+];
+
+function swatchCss(swatch) {
+  if (swatch.rgb) return `rgb(${swatch.rgb.join(' ')})`;
+  const t = (swatch.kelvin - 2200) / 3800;
+  return `oklch(${88 + t * 8}% ${0.12 - t * 0.11} ${70 + t * 160})`;
+}
+
+function hexToRgb(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex ?? '');
+  if (!m) throw new Error(`not a #rrggbb colour: ${hex}`);
+  const n = Number.parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function swatchServiceData(swatch, light) {
+  if (swatch.rgb) return light.caps.color ? { rgb_color: swatch.rgb } : null;
+  if (light.caps.temperature) return { color_temp_kelvin: Math.min(light.caps.maxKelvin, Math.max(light.caps.minKelvin, swatch.kelvin)) };
+  return null;
+}
+
+// stage-morph.js
+const sameKind = (a, b) =>
+  a.nodeType === b.nodeType && a.nodeName === b.nodeName && (a.nodeType !== 1 || a.getAttribute('data-key') === b.getAttribute('data-key'));
+
+function patchAttributes(from, to) {
+  for (const { name } of [...from.attributes]) if (!to.hasAttribute(name)) from.removeAttribute(name);
+  for (const { name, value } of [...to.attributes]) if (from.getAttribute(name) !== value) from.setAttribute(name, value);
+}
+
+function patchChildren(parent, next) {
+  const current = [...parent.childNodes];
+  const wanted = [...next.childNodes];
+  wanted.forEach((node, i) => {
+    const old = current[i];
+    if (!old) { parent.appendChild(node); return; }
+    if (!sameKind(old, node)) { parent.replaceChild(node, old); return; }
+    if (old.nodeType !== 1) { if (old.nodeValue !== node.nodeValue) old.nodeValue = node.nodeValue; return; }
+    patchAttributes(old, node);
+    if (!old.hasAttribute('data-morph-skip')) patchChildren(old, node);
+  });
+  for (let i = current.length - 1; i >= wanted.length; i--) current[i].remove();
+}
+
+function morph(target, html) {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  patchChildren(target, template.content);
 }
 
 // stage-chart.js
@@ -178,7 +260,7 @@ const styles = `
   --glass: oklch(22% .01 60 / .42);
   --glass-hi: oklch(100% 0 0 / .14);
   --glass-line: oklch(100% 0 0 / .16);
-  --deck: oklch(13% .008 60 / .6);
+  --deck: oklch(13% .008 60 / .74);
   --deck-card: oklch(100% 0 0 / .06);
   --warm: oklch(88% .085 78);
   --warm-ink: oklch(24% .035 60);
@@ -220,31 +302,36 @@ ha-icon { --mdc-icon-size: 22px; display: inline-flex; }
 .photo::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(70% 45% at 50% 42%, oklch(80% .12 70 / calc(var(--warmth, 0) * .32)), transparent 70%); mix-blend-mode: soft-light; }
 .photo::after { content: ""; position: absolute; inset: 0; z-index: 2; background: linear-gradient(180deg, oklch(0% 0 0 / .45) 0%, transparent 22%, transparent 38%, oklch(0% 0 0 / .35) 55%, oklch(8% .006 60 / .9) 80%, oklch(8% .006 60 / .96) 100%); }
 .content { position: relative; z-index: 3; width: min(100%, 560px); padding: 0 var(--space-5); }
-.hero { padding-top: clamp(132px, 27cqh, 260px); }
+.hero { padding-top: calc(env(safe-area-inset-top) + 132px); }
 .eyebrow { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 var(--space-3); border-radius: var(--r-full); background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); font-size: var(--fs-12); font-weight: 500; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 var(--space-3); border-radius: var(--r-full); background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: var(--fs-12); font-weight: 500; }
 .chip ha-icon { --mdc-icon-size: 15px; }
 .chip.warn { color: var(--warm); }
 h1 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-52); line-height: .98; font-weight: 600; letter-spacing: -.035em; }
 .status { font-size: var(--fs-16); color: var(--ink-2); }
 
 .strip { display: flex; gap: var(--space-2); margin: var(--space-5) calc(var(--space-5) * -1) 0; padding: 0 var(--space-5); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--space-5); scrollbar-width: none; }
-.tile { position: relative; flex: 0 0 136px; height: 128px; scroll-snap-align: start; padding: var(--space-3) var(--space-3) var(--space-4); border-radius: var(--r-m); display: flex; flex-direction: column; justify-content: space-between; text-align: left; overflow: hidden; background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4); transition: background var(--dur-ui) var(--ease-out), color var(--dur-ui) var(--ease-out), transform var(--dur-fast) var(--ease-out); touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
-.tile:active { transform: scale(.97); }
-.tile[aria-pressed="true"] { background: oklch(93% .045 82 / .9); color: var(--warm-ink); border-color: transparent; }
+.tile { position: relative; flex: 0 0 136px; height: 128px; scroll-snap-align: start; padding: var(--space-3) var(--space-3) var(--space-4); border-radius: var(--r-m); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;
+  background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  transition: background var(--dur-ui) var(--ease-out), color var(--dur-ui) var(--ease-out), transform var(--dur-fast) var(--ease-out); user-select: none; -webkit-user-select: none; contain: layout paint; }
+.tile:has(.tile-open:active) { transform: scale(.97); }
+.tile[data-on="true"] { background: oklch(93% .045 82 / .92); color: var(--warm-ink); border-color: transparent; }
 .tile[data-unavailable] { opacity: .5; }
+.tile-open { position: absolute; inset: 0; border-radius: inherit; z-index: 0; }
+.tile .top, .tile .name, .tile .lvl { position: relative; z-index: 1; pointer-events: none; }
 .tile .top { display: flex; justify-content: space-between; align-items: flex-start; }
-.tile .ic { width: 36px; height: 36px; border-radius: var(--r-full); display: grid; place-items: center; background: var(--glass-hi); }
-.tile[aria-pressed="true"] .ic { background: oklch(80% .12 75); }
+.tile .ic { pointer-events: auto; width: 40px; height: 40px; margin: -2px; border-radius: var(--r-full); display: grid; place-items: center; background: var(--glass-hi); transition: transform var(--dur-fast) var(--ease-out), background var(--dur-ui) var(--ease-out); }
+.tile .ic:active { transform: scale(.9); }
+.tile[data-on="true"] .ic { background: var(--tint, oklch(80% .12 75)); color: oklch(18% .02 60); box-shadow: 0 0 18px var(--tint, transparent); }
 .tile .val { font-size: var(--fs-13); font-weight: 600; }
 .tile b { display: block; font-size: var(--fs-14); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile .lvl { position: absolute; left: var(--space-3); right: var(--space-3); bottom: var(--space-2); height: 3px; border-radius: 3px; background: oklch(0% 0 0 / .12); overflow: hidden; }
 .tile .lvl i { display: block; height: 100%; width: calc(var(--v) * 1%); background: currentColor; opacity: .55; border-radius: 3px; transition: width var(--dur-ui) var(--ease-out); }
-.tile.dimming { transform: scale(.98); }
-.tile.dimming .lvl { height: 6px; }
-.hint { margin: var(--space-3) 0 0; font-size: var(--fs-12); color: var(--ink-3); }
+.strip-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); }
+.strip-foot .hint { margin: 0; }
+.hint { font-size: var(--fs-12); color: var(--ink-3); }
 
-.deck { position: relative; margin: var(--space-5) calc(var(--space-5) * -1) 0; padding: var(--space-2) var(--space-5) calc(env(safe-area-inset-bottom) + 96px); border-radius: var(--r-l) var(--r-l) 0 0; background: var(--deck); border-top: 1px solid var(--glass-line); backdrop-filter: blur(32px) saturate(1.5); -webkit-backdrop-filter: blur(32px) saturate(1.5); box-shadow: 0 -24px 48px oklch(0% 0 0 / .4), inset 0 1px 0 oklch(100% 0 0 / .08); min-height: 60cqh; }
+.deck { position: relative; margin: var(--space-5) calc(var(--space-5) * -1) 0; padding: var(--space-2) var(--space-5) calc(env(safe-area-inset-bottom) + 96px); border-radius: var(--r-l) var(--r-l) 0 0; background: var(--deck); border-top: 1px solid var(--glass-line); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 -24px 48px oklch(0% 0 0 / .4), inset 0 1px 0 oklch(100% 0 0 / .08); min-height: 60cqh; }
 .deck::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 4px; background: var(--ink-3); opacity: .5; margin: 0 auto var(--space-2); }
 .sec { padding-block: var(--space-5); }
 .sec + .sec { border-top: 1px solid oklch(100% 0 0 / .08); }
@@ -261,14 +348,12 @@ h1 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-52); line-heig
 .pill-btn { flex: none; height: 36px; padding: 0 var(--space-4); border-radius: var(--r-full); background: var(--glass-hi); border: 1px solid var(--glass-line); font-size: var(--fs-13); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
 .pill-btn.solid { background: var(--ink); color: oklch(15% .01 60); border-color: transparent; }
 .pill-btn ha-icon { --mdc-icon-size: 18px; }
-.np { position: relative; overflow: hidden; min-height: 132px; display: flex; align-items: flex-end; background: linear-gradient(135deg, oklch(30% .05 40), oklch(18% .03 280)); }
-.np img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.np::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, oklch(10% .01 60 / .9), oklch(10% .01 60 / .5) 60%, transparent); }
-.np .in { position: relative; z-index: 1; width: 100%; }
-.np .app { font-size: var(--fs-11); letter-spacing: .16em; text-transform: uppercase; color: var(--warm); font-weight: 600; }
-.np b { display: block; font-size: var(--fs-20); margin: 2px 0 var(--space-3); }
-.np-actions { display: flex; gap: var(--space-2); }
-
+.np { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--r-m); background: var(--deck-card); border: 1px solid oklch(100% 0 0 / .08); }
+.np-badge { width: 48px; height: 48px; flex: none; border-radius: var(--r-s); display: grid; place-items: center; background: linear-gradient(135deg, oklch(42% .08 60), oklch(26% .05 300)); color: var(--warm); }
+.np b { display: block; font-size: var(--fs-16); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np .muted { display: block; }
+.round { width: 44px; height: 44px; flex: none; border-radius: var(--r-full); display: grid; place-items: center; background: var(--glass-hi); border: 1px solid var(--glass-line); transition: transform var(--dur-fast) var(--ease-out); }
+.round:active { transform: scale(.92); }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
 .stat { border-radius: var(--r-s); padding: var(--space-3); background: var(--deck-card); border: 1px solid oklch(100% 0 0 / .06); }
 .stat b { display: block; font-size: var(--fs-20); font-weight: 600; letter-spacing: -.01em; }
@@ -306,78 +391,81 @@ h1 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-52); line-heig
 .rk.ok { background: var(--warm); color: var(--warm-ink); font-weight: 700; }
 .apps { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
+.sheet h4 { margin: var(--space-5) 0 var(--space-3); font-size: var(--fs-12); letter-spacing: .16em; text-transform: uppercase; font-weight: 600; color: var(--ink-3); }
+.sheet .row { display: flex; align-items: center; gap: var(--space-2); }
+.row.gap { gap: var(--space-2); margin-top: var(--space-2); }
+.fader.kelvin { background: linear-gradient(90deg, oklch(80% .13 65), oklch(95% .02 90) 55%, oklch(85% .06 235)); }
+.fader.kelvin .f { background: none; border-right: 3px solid oklch(15% .01 60); border-radius: 0; }
+.fader.kelvin .l { color: oklch(18% .02 60); }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: var(--space-2); }
+.swatch { position: relative; display: grid; justify-items: center; gap: 6px; padding: var(--space-2) 0; border-radius: var(--r-s); font-size: var(--fs-12); color: var(--ink-2); cursor: pointer; transition: transform var(--dur-fast) var(--ease-out); }
+.swatch:active { transform: scale(.94); }
+.swatch i { width: 40px; height: 40px; border-radius: var(--r-full); background: var(--sw); box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .2); display: grid; place-items: center; }
+.swatch.custom i { background: conic-gradient(oklch(70% .2 0), oklch(70% .2 120), oklch(70% .2 240), oklch(70% .2 360)); color: oklch(98% 0 0); }
+.swatch input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-3); }
+.chip-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 var(--space-3); border-radius: var(--r-full); border: 1px solid var(--glass-line); background: var(--deck-card); font-size: var(--fs-13); font-weight: 500; }
+.chip-btn ha-icon { --mdc-icon-size: 18px; }
+.chip-btn[aria-pressed="true"] { background: var(--ink); color: oklch(15% .01 60); border-color: transparent; }
+.switch { width: 52px; height: 32px; border-radius: var(--r-full); background: oklch(100% 0 0 / .18); position: relative; flex: none; transition: background var(--dur-fast) var(--ease-out); }
+.switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: var(--r-full); background: oklch(98% 0 0); transition: transform var(--dur-ui) var(--ease-out); }
+.switch[aria-checked="true"] { background: var(--warm); }
+.switch[aria-checked="true"]::after { transform: translateX(20px); background: var(--warm-ink); }
+.link { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-5); font-size: var(--fs-14); color: var(--warm); font-weight: 500; }
 @keyframes up { from { transform: translateY(105%); } }
 @keyframes fade { from { opacity: 0; } }
 @media (min-width: 900px) {
   .content { margin-left: clamp(24px, 6vw, 96px); width: min(100%, 720px); }
   .strip { flex-wrap: wrap; overflow-x: visible; margin-inline: 0; padding-inline: 0; }
-  .hero { padding-top: clamp(132px, 30cqh, 300px); }
+  .hero { padding-top: max(150px, 22cqh); }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 `;
 
 // stage-gestures.js
-const HOLD_MS = 480;
+const LIVE_EVERY_MS = 250;
 const clamp = (v) => Math.max(1, Math.min(100, Math.round(v)));
 
-function startMode(g, dx, dy) {
-  if (g.isFader && Math.abs(dx) > 4) return 'dim';
-  if (!g.isFader && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) return 'dim';
-  if (Math.abs(dx) > 10 || Math.abs(dy) > 10) return 'scroll';
-  return null;
-}
+function attachFaders(root, { onPreview, onSend }) {
+  let drag = null;
 
-function attachGestures(root, { levelOf, onLive, onCommit, onHold, onTap }) {
-  let g = null;
-  let swallowClick = false;
+  const valueAt = (el, clientX) => {
+    const box = el.getBoundingClientRect();
+    return clamp(((clientX - box.left) / box.width) * 100);
+  };
 
   root.addEventListener('pointerdown', (e) => {
-    const el = e.target.closest('[data-slider], [data-dim]');
+    const el = e.target.closest('[data-slider]');
     if (!el) return;
-    const isFader = el.hasAttribute('data-slider');
-    const id = isFader ? el.dataset.slider : el.dataset.dim;
-    g = { el, id, isFader, x: e.clientX, y: e.clientY, start: levelOf(id), mode: null, pointer: e.pointerId, value: null };
-    if (!isFader) g.hold = setTimeout(() => { if (g && !g.mode) { g.mode = 'hold'; swallowClick = true; onHold(id); } }, HOLD_MS);
+    drag = { el, key: el.dataset.slider, x: e.clientX, moved: false, sentAt: 0, value: null };
+    el.setPointerCapture(e.pointerId);
   });
 
   root.addEventListener('pointermove', (e) => {
-    if (!g || g.mode === 'hold' || g.mode === 'scroll') return;
-    const dx = e.clientX - g.x;
-    if (!g.mode) {
-      g.mode = startMode(g, dx, e.clientY - g.y);
-      if (!g.mode) return;
-      clearTimeout(g.hold);
-      if (g.mode === 'scroll') return;
-      g.el.setPointerCapture(g.pointer);
-      g.el.classList.add(g.isFader ? 'drag' : 'dimming');
-    }
-    const box = g.el.getBoundingClientRect();
-    g.value = clamp(g.isFader ? ((e.clientX - box.left) / box.width) * 100 : g.start + dx / 2.2);
-    onLive(g.el, g.id, g.value);
+    if (!drag) return;
+    if (!drag.moved && Math.abs(e.clientX - drag.x) < 4) return;
+    drag.moved = true;
+    drag.el.classList.add('drag');
+    drag.value = valueAt(drag.el, e.clientX);
+    onPreview(drag.el, drag.key, drag.value);
+    const now = performance.now();
+    if (now - drag.sentAt > LIVE_EVERY_MS) { drag.sentAt = now; onSend(drag.key, drag.value, false); }
   });
 
-  const end = (cancelled) => {
-    if (!g) return;
-    clearTimeout(g.hold);
-    const { mode, isFader, id, value, el } = g;
-    g = null;
-    el.classList.remove('drag', 'dimming');
+  const finish = (cancelled) => {
+    if (!drag) return;
+    const { el, key, moved, x } = drag;
+    const value = drag.value ?? valueAt(el, x);
+    drag = null;
+    el.classList.remove('drag');
     if (cancelled) return;
-    if (mode === 'dim' && value != null) { swallowClick = true; onCommit(id, value); }
-    else if (isFader && !mode) { swallowClick = true; onTap(id); }
+    if (!moved) onPreview(el, key, value);
+    onSend(key, value, true);
   };
-  root.addEventListener('pointerup', () => end(false));
-  root.addEventListener('pointercancel', () => end(true));
-  root.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-dim]')) e.preventDefault(); });
+  root.addEventListener('pointerup', () => finish(false));
+  root.addEventListener('pointercancel', () => finish(true));
 
-  return {
-    consumeClick() {
-      const was = swallowClick;
-      swallowClick = false;
-      return was;
-    },
-    isActive: () => g != null,
-  };
+  return { isActive: () => drag != null };
 }
 
 // stage-views.js
@@ -386,6 +474,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const icon = (name) => `<ha-icon icon="${esc(name)}"></ha-icon>`;
 const st = (ctx, id) => (id ? ctx.hass.states[id] : undefined);
 const num = (ctx, id, digits) => formatNumber(st(ctx, id)?.state, digits);
+
 
 function roomLights(ctx, room) {
   return (room.lights ?? [])
@@ -403,15 +492,19 @@ function tvView(ctx) {
   const tv = ctx.config.tv ?? {};
   const s = st(ctx, tv.entity);
   const app = st(ctx, tv.app_source)?.attributes.app_id;
-  return { on: isOn(s), app: appName(app), title: s?.attributes.media_title, picture: s?.attributes.entity_picture };
+  return { on: isOn(s), app: appName(app), title: s?.attributes.media_title };
 }
 
-const tile = (l) => `<button class="tile" data-act="toggle-light" data-arg="${l.id}" data-dim="${l.id}" aria-pressed="${l.on}" ${l.unavailable ? 'data-unavailable' : ''} style="--v:${l.level}">
-  <span class="top"><span class="ic">${icon(l.icon)}</span><span class="val num">${l.unavailable ? 'Offline' : l.on ? `${l.level}%` : 'Off'}</span></span>
-  <span><b>${esc(l.name)}</b></span><span class="lvl"><i></i></span></button>`;
+const tileTint = (l) => (l.on && l.rgb ? `--tint: rgb(${l.rgb.join(' ')})` : '');
 
-const deviceTile = ({ act, arg = '', ic, name, value, on }) => `<button class="tile" data-act="${act}" data-arg="${arg}" aria-pressed="${on}" style="--v:0">
-  <span class="top"><span class="ic">${icon(ic)}</span><span class="val">${esc(value)}</span></span><span><b>${esc(name)}</b></span></button>`;
+const tile = (l) => `<div class="tile" data-key="${l.id}" data-on="${l.on}" ${l.unavailable ? 'data-unavailable' : ''} style="--v:${l.level};${tileTint(l)}">
+  <button class="tile-open" data-act="sheet" data-arg="light:${l.id}" aria-label="${esc(l.name)} settings"></button>
+  <span class="top"><button class="ic" data-act="toggle-light" data-arg="${l.id}" aria-pressed="${l.on}" aria-label="Turn ${esc(l.name)} ${l.on ? 'off' : 'on'}">${icon(l.icon)}</button><span class="val num">${l.unavailable ? 'Offline' : l.on ? `${l.level}%` : 'Off'}</span></span>
+  <span class="name"><b>${esc(l.name)}</b></span><span class="lvl"><i></i></span></div>`;
+
+const deviceTile = ({ act, arg = '', ic, name, value, on }) => `<div class="tile" data-key="${act}-${arg}" data-on="${on}" style="--v:0">
+  <button class="tile-open" data-act="${act}" data-arg="${arg}" aria-label="${esc(name)}"></button>
+  <span class="top"><span class="ic">${icon(ic)}</span><span class="val">${esc(value)}</span></span><span class="name"><b>${esc(name)}</b></span></div>`;
 
 function chips(ctx, room) {
   const out = [];
@@ -438,10 +531,12 @@ function scenesSection(ctx) {
 function nowPlayingSection(ctx) {
   const tv = tvView(ctx);
   if (!tv.on) return '';
-  const art = tv.picture ? `<img src="${esc(tv.picture)}" alt="">` : '';
-  return `<section class="sec"><h2>Now playing</h2><div class="card np">${art}<div class="in">
-    <span class="app">${esc(tv.app && tv.app !== 'Home screen' ? `${tv.app} · TV` : 'TV')}</span><b>${esc(tv.title || tv.app || 'TV is on')}</b>
-    <div class="np-actions"><button class="pill-btn solid" data-act="key" data-arg="MEDIA_PLAY_PAUSE">${icon('mdi:play-pause')} Play/Pause</button><button class="pill-btn" data-act="sheet" data-arg="tv">${icon('mdi:remote-tv')} Remote</button></div></div></div></section>`;
+  const home = !tv.app || tv.app === 'Home screen';
+  return `<section class="sec"><h2>Now playing</h2><div class="np">
+    <span class="np-badge">${icon(home ? 'mdi:television' : 'mdi:play-circle-outline')}</span>
+    <span class="grow"><b>${esc(tv.title || (home ? 'Home screen' : tv.app))}</b><span class="muted">${esc(home ? 'TV is on' : `${tv.app} on TV`)}</span></span>
+    <button class="round" data-act="key" data-arg="MEDIA_PLAY_PAUSE" aria-label="Play or pause">${icon('mdi:play-pause')}</button>
+    <button class="round" data-act="sheet" data-arg="tv" aria-label="Remote">${icon('mdi:remote-tv')}</button></div></section>`;
 }
 
 function energySection(ctx) {
@@ -451,7 +546,7 @@ function energySection(ctx) {
   const unit = st(ctx, e.power)?.attributes.unit_of_measurement ?? 'W';
   return `<section class="sec"><h2>${esc(e.name ?? 'Energy')}</h2>
     <div class="stats"><div class="stat"><b class="num">${num(ctx, e.power)}</b><span>${esc(unit)} now</span></div><div class="stat"><b class="num">${num(ctx, e.today, 2)}</b><span>kWh today</span></div><div class="stat"><b class="num">${num(ctx, e.month_cost, 2)}</b><span>RON this month</span></div></div>
-    <div class="chart-card"><div class="chart-head"><span>Power, last 24 h</span><span><b class="num">${num(ctx, e.power)} ${esc(unit)}</b> now</span></div><div class="chart-slot" data-unit="${esc(unit)}"></div></div>
+    <div class="chart-card"><div class="chart-head"><span>Power, last 24 h</span><span><b class="num">${num(ctx, e.power)} ${esc(unit)}</b> now</span></div><div class="chart-slot" data-morph-skip data-unit="${esc(unit)}"></div></div>
     <button class="card row" data-act="toggle" data-arg="${e.switch}">${icon('mdi:power-socket-eu')}<span class="grow"><b>${esc(e.switch_name ?? 'Plug')}</b><div class="muted num">${on ? 'On' : 'Off'} · ${num(ctx, e.today_cost, 2)} RON today</div></span><span class="pill-btn">${on ? 'Turn off' : 'Turn on'}</span></button></section>`;
 }
 
@@ -476,12 +571,12 @@ function pageHtml(ctx, room) {
     + (fan ? deviceTile({ act: 'toggle', arg: room.fan, ic: 'mdi:fan', name: 'Fan', value: fan.on ? `${fan.level}%` : 'Off', on: fan.on }) : '');
   const deck = (room.sections ?? ['scenes']).map((k) => SECTIONS[k]?.(ctx) ?? '').join('');
   const pos = room.photo_position ? `style="object-position:${esc(room.photo_position)}"` : '';
-  return `<section class="page" aria-label="${esc(room.name)}" style="--lux:${light.lux};--warmth:${light.warmth}">
+  return `<section class="page" data-key="${esc(room.id)}" aria-label="${esc(room.name)}" style="--lux:${light.lux};--warmth:${light.warmth}">
     <div class="photo"><img src="${esc(room.photo)}" alt="" ${pos}></div>
     <div class="content">
       <div class="hero"><div class="eyebrow">${chips(ctx, room)}</div><h1>${esc(room.name)}</h1><div class="status">${esc(roomStatus({ lights, tvOn: tv?.on, fan }))}</div></div>
       <div class="strip">${tiles}</div>
-      <p class="hint">Tap to toggle · drag sideways to dim · hold for all controls</p>
+      <div class="strip-foot"><p class="hint">Icon switches · card opens colour</p>${lights.length > 1 ? `<button class="pill-btn" data-act="sheet" data-arg="room:${room.id}">${icon('mdi:palette-outline')} All lights</button>` : ''}</div>
       <div class="deck">${deck}</div>
     </div></section>`;
 }
@@ -494,22 +589,56 @@ function chromeHtml(ctx, page) {
     const lit = roomLights(ctx, r).filter((l) => l.on).length;
     return `<button class="tab" data-act="go" data-arg="${i}" ${i === page ? 'aria-current="page"' : ''}>${esc(r.name)}${lit ? `<sup class="num">${lit}</sup>` : ''}</button>`;
   }).join('');
-  return `<div class="chrome"><div class="bar"><span class="mark"><button class="menu" data-act="menu" aria-label="Open menu">${icon('mdi:menu')}</button>${esc(ctx.config.title ?? 'Home')}</span>
+  return `<div class="chrome" data-key="chrome"><div class="bar"><span class="mark"><button class="menu" data-act="menu" aria-label="Open menu">${icon('mdi:menu')}</button>${esc(ctx.config.title ?? 'Home')}</span>
     <span class="who"><span class="dot ${home ? '' : 'away'}"></span>${esc(person?.attributes.friendly_name ?? '')} ${home ? 'is home' : 'is away'} · <span class="num">${time}</span></span></div>
     <nav class="tabs" aria-label="Rooms">${tabs}<span class="ink-bar"></span></nav></div>`;
 }
 
-function roomSheet(ctx, room) {
-  const faders = roomLights(ctx, room).map((l) => `<div class="fader ${l.on ? '' : 'off'}" data-slider="${l.id}" role="slider" tabindex="0" aria-label="${esc(l.name)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${l.level}" style="--v:${l.on ? l.level : l.lastLevel}">
-    <div class="f"></div><div class="l"><span class="row">${icon(l.icon)} ${esc(l.name)}</span><span class="num" data-pct>${l.on ? `${l.level}%` : 'Off'}</span></div></div>`).join('');
-  return `<header><h3>${esc(room.name)}</h3><button class="x" data-act="sheet" aria-label="Close">${icon('mdi:close')}</button></header>${faders}`;
+// stage-sheets.js
+
+const header = (title, extra = '') => `<header><h3>${esc(title)}</h3><span class="row">${extra}<button class="x" data-act="sheet" aria-label="Close">${icon('mdi:close')}</button></span></header>`;
+
+const fader = ({ key, label, ic, value, shown, text, kind = 'brightness', off = false }) => `<div class="fader ${kind} ${off ? 'off' : ''}" data-key="${key}" data-slider="${key}" role="slider" tabindex="0" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}" style="--v:${shown}">
+  <div class="f"></div><div class="l"><span class="row">${icon(ic)} ${esc(label)}</span><span class="num" data-pct>${esc(text)}</span></div></div>`;
+
+const swatchRow = (target, light) => `<div class="swatches">${SWATCHES.filter((s) => !light || swatchServiceData(s, light)).map((s, i) => `<button class="swatch" data-act="swatch" data-arg="${target}|${i}" style="--sw:${swatchCss(s)}" aria-label="${esc(s.name)}"><i></i><span>${esc(s.name)}</span></button>`).join('')}
+  <label class="swatch custom"><input type="color" data-color="${target}" value="#ff9628" aria-label="Custom colour"><i>${icon('mdi:eyedropper-variant')}</i><span>Custom</span></label></div>`;
+
+function lightSheet(ctx, id) {
+  const room = ctx.config.rooms.find((r) => r.lights?.some((l) => l.entity === id));
+  const light = room && roomLights(ctx, room).find((l) => l.id === id);
+  if (!light) return header('Light') + '<p class="muted">This light is not available.</p>';
+  const toggle = `<button class="switch" role="switch" aria-checked="${light.on}" aria-label="Power" data-act="toggle-light" data-arg="${id}"></button>`;
+  const effects = st(ctx, id)?.attributes.effect_list ?? [];
+  const current = st(ctx, id)?.attributes.effect;
+  return `${header(light.name, toggle)}
+    ${fader({ key: `brightness:${id}`, label: 'Brightness', ic: 'mdi:brightness-6', value: light.level, shown: light.on ? light.level : light.lastLevel, text: light.on ? `${light.level}%` : 'Off', off: !light.on })}
+    ${light.caps.temperature ? fader({ key: `kelvin:${id}`, kind: 'kelvin', label: 'Warmth', ic: 'mdi:thermometer', value: 0, shown: light.kelvin ? kelvinToPercent(light.kelvin, light.caps.minKelvin, light.caps.maxKelvin) : 30, text: light.kelvin ? `${light.kelvin} K` : 'Colour' }) : ''}
+    <h4>Colour</h4>${swatchRow(`light:${id}`, light)}
+    ${effects.length ? `<h4>Effects</h4><div class="chips">${effects.map((e) => `<button class="chip-btn" data-act="effect" data-arg="${id}|${esc(e)}" aria-pressed="${e === current}">${esc(e)}</button>`).join('')}</div>` : ''}
+    <button class="link" data-act="sheet" data-arg="room:${room.id}">${icon('mdi:palette-outline')} Set a colour for all lights in ${esc(room.name.toLowerCase())}</button>`;
+}
+
+function roomSheet(ctx, roomId) {
+  const room = ctx.config.rooms.find((r) => r.id === roomId);
+  if (!room) return header('Room');
+  const lights = roomLights(ctx, room);
+  const excluded = ctx.excluded[roomId] ?? new Set();
+  const chosen = lights.filter((l) => !excluded.has(l.id));
+  const avg = chosen.length ? Math.round(chosen.reduce((a, l) => a + (l.on ? l.level : 0), 0) / chosen.length) : 0;
+  return `${header(`All lights · ${room.name}`)}
+    <p class="muted">Choose which lights follow. Colours apply to every selected light that supports them.</p>
+    <div class="chips">${lights.map((l) => `<button class="chip-btn" data-act="include" data-arg="${roomId}|${l.id}" aria-pressed="${!excluded.has(l.id)}">${icon(excluded.has(l.id) ? 'mdi:checkbox-blank-circle-outline' : 'mdi:check-circle')} ${esc(l.name)}</button>`).join('')}</div>
+    ${fader({ key: `group:${roomId}`, label: `${chosen.length} selected`, ic: 'mdi:brightness-6', value: avg, shown: avg || 50, text: avg ? `${avg}%` : 'Off', off: !avg })}
+    <div class="row gap"><button class="pill-btn" data-act="group-power" data-arg="${roomId}|on">${icon('mdi:lightbulb-on-outline')} All on</button><button class="pill-btn" data-act="group-power" data-arg="${roomId}|off">${icon('mdi:lightbulb-off-outline')} All off</button></div>
+    <h4>Colour</h4>${swatchRow(`room:${roomId}`)}`;
 }
 
 function tvSheet(ctx) {
   const tv = tvView(ctx);
   const apps = ctx.config.tv?.apps ?? [];
   const key = (code, ic, label, cls = '') => `<button class="rk ${cls}" data-act="key" data-arg="${code}" aria-label="${label}">${ic.startsWith('mdi:') ? icon(ic) : ic}</button>`;
-  return `<header><h3>TV</h3><button class="x" data-act="sheet" aria-label="Close">${icon('mdi:close')}</button></header>
+  return `${header('TV')}
     <div class="row"><span class="grow"><b>${esc(tv.on ? tv.title || tv.app || 'On' : 'TV is off')}</b><div class="muted">${esc(tv.on ? tv.app : 'Philips · Ambilight')}</div></span>
     <button class="pill-btn ${tv.on ? 'solid' : ''}" data-act="toggle" data-arg="${ctx.config.tv.entity}">${tv.on ? 'Turn off' : 'Turn on'}</button></div>
     ${tv.on ? `<div class="remote">${key('VOLUME_UP', 'mdi:volume-plus', 'Volume up')}${key('DPAD_UP', 'mdi:chevron-up', 'Up')}${key('BACK', 'mdi:arrow-u-left-top', 'Back')}
@@ -520,9 +649,55 @@ function tvSheet(ctx) {
 
 function sheetHtml(ctx, sheet) {
   if (!sheet) return '';
-  const room = ctx.config.rooms.find((r) => r.id === sheet);
-  const body = sheet === 'tv' ? tvSheet(ctx) : room ? roomSheet(ctx, room) : '';
-  return `<div class="scrim" data-act="sheet"></div><section class="sheet" role="dialog" aria-label="Controls"><div class="grip"></div>${body}</section>`;
+  const [kind, arg] = sheet.split(':');
+  const body = kind === 'tv' ? tvSheet(ctx) : kind === 'light' ? lightSheet(ctx, sheet.slice(6)) : kind === 'room' ? roomSheet(ctx, arg) : '';
+  return `<div class="scrim" data-key="scrim" data-act="sheet"></div><section class="sheet" data-key="sheet-${esc(kind)}" role="dialog" aria-label="Controls"><div class="grip"></div>${body}</section>`;
+}
+
+// stage-lights.js
+
+function roomOf(config, entityId) {
+  return config.rooms.find((r) => r.lights?.some((l) => l.entity === entityId));
+}
+
+function selectedLights(config, excluded, roomId) {
+  const room = config.rooms.find((r) => r.id === roomId);
+  const skip = excluded[roomId] ?? new Set();
+  return (room?.lights ?? []).map((l) => l.entity).filter((id) => !skip.has(id));
+}
+
+function faderText(kind, value, light) {
+  if (kind === 'kelvin') return `${percentToKelvin(value, light.caps.minKelvin, light.caps.maxKelvin)} K`;
+  return `${value}%`;
+}
+
+function faderCall({ config, excluded, hass }, key, value) {
+  const [kind, target] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
+  if (kind === 'brightness') return { ids: [target], data: { entity_id: target, brightness_pct: value } };
+  if (kind === 'group') {
+    const ids = selectedLights(config, excluded, target);
+    return { ids, data: { entity_id: ids, brightness_pct: value } };
+  }
+  if (kind === 'kelvin') {
+    const light = lightView(hass.states[target]);
+    return { ids: [], data: { entity_id: target, color_temp_kelvin: percentToKelvin(value, light.caps.minKelvin, light.caps.maxKelvin) } };
+  }
+  throw new Error(`stage-card: unknown fader "${key}"`);
+}
+
+function targetsOf({ config, excluded }, target) {
+  const [kind, id] = [target.slice(0, target.indexOf(':')), target.slice(target.indexOf(':') + 1)];
+  return kind === 'room' ? selectedLights(config, excluded, id) : [id];
+}
+
+function colorCalls(ctx, target, choice) {
+  return targetsOf(ctx, target)
+    .map((id) => ({ id, light: lightView(ctx.hass.states[id]) }))
+    .map(({ id, light }) => {
+      const data = choice.hex ? (light.caps.color ? { rgb_color: hexToRgb(choice.hex) } : null) : swatchServiceData(SWATCHES[choice.swatch], light);
+      return data && { entity_id: id, ...data };
+    })
+    .filter(Boolean);
 }
 
 // stage-card.js
@@ -538,6 +713,7 @@ class StageCard extends HTMLElement {
     this.page = 0;
     this.sheet = null;
     this.pending = {};
+    this.excluded = {};
     this.history = [];
     this.signature = '';
   }
@@ -546,10 +722,7 @@ class StageCard extends HTMLElement {
     this._hass = hass;
     if (!this.shadowRoot) this.mount();
     const sig = this.watched().map((id) => hass.states[id]?.last_updated ?? '').join('|');
-    if (sig !== this.signature && !this.gestures.isActive()) {
-      this.signature = sig;
-      this.render();
-    }
+    if (sig !== this.signature) { this.signature = sig; this.render(); }
     if (Date.now() - (this.historyAt ?? 0) > HISTORY_EVERY_MS) this.loadHistory();
   }
 
@@ -570,56 +743,61 @@ class StageCard extends HTMLElement {
     this.stage = root.querySelector('.stage');
     this.stage.addEventListener('click', (e) => this.onClick(e));
     this.stage.addEventListener('keydown', (e) => this.onKey(e));
-    this.gestures = attachGestures(this.stage, {
-      levelOf: (id) => lightView(this._hass.states[id], this.pending[id]).lastLevel,
-      onLive: (el, id, value) => this.previewLevel(el, id, value),
-      onCommit: (id, value) => this.setLevel(id, value),
-      onHold: (id) => { this.sheet = this.config.rooms.find((r) => r.lights?.some((l) => l.entity === id))?.id ?? null; this.render(); },
-      onTap: (id) => this.call('light', 'toggle', { entity_id: id }),
+    this.stage.addEventListener('change', (e) => this.onColorPick(e));
+    this.stage.addEventListener('scroll', (e) => this.onScroll(e), { capture: true, passive: true });
+    this.faders = attachFaders(this.stage, {
+      onPreview: (el, key, value) => this.previewFader(el, key, value),
+      onSend: (key, value, final) => this.sendFader(key, value, final),
     });
-    setInterval(() => { if (!this.sheet && !this.gestures.isActive()) this.render(); }, 30_000);
+    setInterval(() => this.render(), 30_000);
+    new ResizeObserver(() => { this.drawCharts(true); this.placeInkBar(); }).observe(this.stage);
   }
 
   ctx() {
-    return { hass: this._hass, config: this.config, pending: this.pending, activeScene: this.activeScene, history: this.history };
+    return { hass: this._hass, config: this.config, pending: this.pending, excluded: this.excluded, activeScene: this.activeScene, history: this.history };
   }
 
   render() {
-    if (!this.stage || !this._hass) return;
-    const pager = this.stage.querySelector('.pager');
-    const keep = pager ? { left: pager.scrollLeft, tops: [...pager.children].map((p) => p.scrollTop) } : null;
+    if (!this.stage || !this._hass || this.faders?.isActive()) return;
     const ctx = this.ctx();
-    this.stage.innerHTML = `<div class="pager">${this.config.rooms.map((r) => pageHtml(ctx, r)).join('')}</div>${chromeHtml(ctx, this.page)}${sheetHtml(ctx, this.sheet)}`;
-    const next = this.stage.querySelector('.pager');
-    if (keep) { next.scrollLeft = keep.left; [...next.children].forEach((p, i) => { p.scrollTop = keep.tops[i] ?? 0; }); }
-    else requestAnimationFrame(() => { next.scrollLeft = this.page * next.clientWidth; });
-    next.addEventListener('scroll', () => this.onPagerScroll(), { passive: true });
-    [...next.children].forEach((p) => p.addEventListener('scroll', () => this.updateChrome(), { passive: true }));
-    requestAnimationFrame(() => { this.drawCharts(); this.updateChrome(); });
+    const first = !this.stage.firstChild;
+    morph(this.stage, `<div class="pager" data-key="pager">${this.config.rooms.map((r) => pageHtml(ctx, r)).join('')}</div>${chromeHtml(ctx, this.page)}${sheetHtml(ctx, this.sheet)}`);
+    if (first) requestAnimationFrame(() => { this.stage.querySelector('.pager').scrollLeft = this.page * this.stage.clientWidth; });
+    requestAnimationFrame(() => { this.drawCharts(false); this.placeInkBar(); this.updateChrome(); });
   }
 
-  drawCharts() {
-    this.stage.querySelectorAll('.chart-slot').forEach((slot) => {
-      const opts = { unit: slot.dataset.unit, width: Math.max(240, Math.round(slot.clientWidth)) };
+  drawCharts(force) {
+    this.stage?.querySelectorAll('.chart-slot').forEach((slot) => {
+      const width = Math.max(240, Math.round(slot.clientWidth));
+      const key = `${width}|${this.historyAt}|${this.history.length}`;
+      if (!force && slot.dataset.drawn === key) return;
+      if (!slot.clientWidth) return;
+      const opts = { unit: slot.dataset.unit, width };
       slot.innerHTML = chartSvg(this.history, opts);
+      slot.dataset.drawn = key;
       attachChartHover(slot, this.history, opts);
     });
   }
 
-  onPagerScroll() {
-    const pager = this.stage.querySelector('.pager');
-    const i = Math.round(pager.scrollLeft / pager.clientWidth);
-    if (i !== this.page) { this.page = i; this.stage.querySelectorAll('.tab').forEach((t, j) => t.toggleAttribute('aria-current', j === i)); }
+  onScroll(e) {
+    if (e.target.classList?.contains('pager')) {
+      const i = Math.round(e.target.scrollLeft / e.target.clientWidth);
+      if (i !== this.page) { this.page = i; this.stage.querySelectorAll('.tab').forEach((t, j) => t.toggleAttribute('aria-current', j === i)); this.placeInkBar(); }
+    }
     this.updateChrome();
   }
 
-  updateChrome() {
-    const pager = this.stage.querySelector('.pager');
-    const tab = this.stage.querySelectorAll('.tab')[this.page];
-    const bar = this.stage.querySelector('.ink-bar');
+  placeInkBar() {
+    const tab = this.stage?.querySelectorAll('.tab')[this.page];
+    const bar = this.stage?.querySelector('.ink-bar');
     if (tab && bar) { bar.style.width = `${tab.offsetWidth}px`; bar.style.transform = `translateX(${tab.offsetLeft}px)`; }
-    const page = pager?.children[this.page];
-    this.stage.querySelector('.chrome')?.classList.toggle('solid', !!page && page.scrollTop > 120);
+  }
+
+  updateChrome() {
+    const page = this.stage.querySelector('.pager')?.children[this.page];
+    const solid = !!page && page.scrollTop > 80;
+    const chrome = this.stage.querySelector('.chrome');
+    if (chrome && chrome.classList.contains('solid') !== solid) chrome.classList.toggle('solid', solid);
   }
 
   goTo(i) {
@@ -627,29 +805,40 @@ class StageCard extends HTMLElement {
     const pager = this.stage.querySelector('.pager');
     const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
     pager.scrollTo({ left: i * pager.clientWidth, behavior: smooth ? 'smooth' : 'auto' });
-    this.onPagerScroll();
+    this.stage.querySelectorAll('.tab').forEach((t, j) => t.toggleAttribute('aria-current', j === i));
+    this.placeInkBar();
   }
 
-  previewLevel(el, id, value) {
+  previewFader(el, key, value) {
     el.style.setProperty('--v', value);
     el.classList.remove('off');
-    el.setAttribute('aria-pressed', 'true');
-    const label = el.querySelector('[data-pct], .val');
-    if (label) label.textContent = `${value}%`;
-    const room = this.config.rooms.find((r) => r.lights?.some((l) => l.entity === id));
-    const page = el.closest('.page');
-    if (!room || !page) return;
+    const kind = key.slice(0, key.indexOf(':'));
+    const id = key.slice(key.indexOf(':') + 1);
+    const light = kind === 'kelvin' ? lightView(this._hass.states[id]) : null;
+    const label = el.querySelector('[data-pct]');
+    if (label) label.textContent = faderText(kind, value, light);
+    if (kind === 'brightness') this.previewRoom(id, value);
+  }
+
+  previewRoom(id, value) {
+    const room = roomOf(this.config, id);
+    const page = room && this.stage.querySelector(`.page[data-key="${room.id}"]`);
+    if (!page) return;
     const levels = room.lights.map((l) => (l.entity === id ? { level: value } : lightView(this._hass.states[l.entity], this.pending[l.entity])));
     const light = roomLight(levels);
     page.style.setProperty('--lux', light.lux);
     page.style.setProperty('--warmth', light.warmth);
   }
 
-  setLevel(id, value) {
-    this.pending[id] = value;
-    setTimeout(() => { delete this.pending[id]; this.render(); }, PENDING_MS);
+  sendFader(key, value, final) {
+    let call;
+    try { call = faderCall(this.ctx(), key, value); } catch (err) { console.error(err); return; }
+    for (const id of call.ids) this.pending[id] = value;
     this.activeScene = null;
-    this.call('light', 'turn_on', { entity_id: id, brightness_pct: value });
+    this.call('light', 'turn_on', call.data);
+    if (!final) return;
+    clearTimeout(this.pendingTimer);
+    this.pendingTimer = setTimeout(() => { this.pending = {}; this.render(); }, PENDING_MS);
     this.render();
   }
 
@@ -659,8 +848,15 @@ class StageCard extends HTMLElement {
     });
   }
 
-  runAction(act, arg) {
+  applyColor(target, choice) {
+    const calls = colorCalls(this.ctx(), target, choice);
+    for (const data of calls) this.call('light', 'turn_on', data);
+    this.activeScene = null;
+  }
+
+  runAction(act, arg = '') {
     const c = this.config;
+    const [a, b] = arg.split('|');
     const actions = {
       'toggle-light': () => this.call('light', 'toggle', { entity_id: arg }),
       toggle: () => this.call('homeassistant', 'toggle', { entity_id: arg }),
@@ -670,17 +866,25 @@ class StageCard extends HTMLElement {
       key: () => this.call('remote', 'send_command', { entity_id: c.tv.remote, command: arg }),
       app: () => this.call('media_player', 'play_media', { entity_id: c.tv.entity, media_content_type: 'app', media_content_id: arg }),
       vacuum: () => { const s = this._hass.states[c.vacuum.entity]?.state; this.call('vacuum', s === 'cleaning' ? 'return_to_base' : 'start', { entity_id: c.vacuum.entity }); },
+      swatch: () => this.applyColor(a, { swatch: +b }),
+      effect: () => this.call('light', 'turn_on', { entity_id: a, effect: b }),
+      include: () => { const set = (this.excluded[a] ??= new Set()); set.has(b) ? set.delete(b) : set.add(b); },
+      'group-power': () => this.call('light', b === 'on' ? 'turn_on' : 'turn_off', { entity_id: selectedLights(this.config, this.excluded, a) }),
       menu: () => this.dispatchEvent(new Event('hass-toggle-menu', { bubbles: true, composed: true })),
     };
     actions[act]?.();
   }
 
   onClick(e) {
-    if (this.gestures.consumeClick()) return;
     const el = e.target.closest('[data-act]');
     if (!el) return;
     this.runAction(el.dataset.act, el.dataset.arg);
     if (!['go', 'menu'].includes(el.dataset.act)) this.render();
+  }
+
+  onColorPick(e) {
+    const input = e.target.closest('input[data-color]');
+    if (input) this.applyColor(input.dataset.color, { hex: input.value });
   }
 
   onKey(e) {
@@ -689,10 +893,9 @@ class StageCard extends HTMLElement {
     const step = { ArrowRight: 10, ArrowUp: 10, ArrowLeft: -10, ArrowDown: -10 }[e.key];
     if (!fader || !step) return;
     e.preventDefault();
-    const id = fader.dataset.slider;
-    const current = lightView(this._hass.states[id], this.pending[id]).level;
-    this.setLevel(id, Math.max(1, Math.min(100, current + step)));
-    this.stage.querySelector(`[data-slider="${id}"]`)?.focus();
+    const value = Math.max(1, Math.min(100, Number(fader.getAttribute('aria-valuenow') || 0) + step));
+    this.previewFader(fader, fader.dataset.slider, value);
+    this.sendFader(fader.dataset.slider, value, true);
   }
 
   async loadHistory() {
@@ -703,7 +906,7 @@ class StageCard extends HTMLElement {
       const start = new Date(Date.now() - 24 * 3600_000).toISOString();
       const res = await this._hass.callWS({ type: 'history/history_during_period', start_time: start, entity_ids: [power], minimal_response: true, no_attributes: true });
       this.history = bucketSeries(seriesFromHistory(res[power] ?? []));
-      this.render();
+      this.drawCharts(true);
     } catch (err) {
       console.error(`stage-card: loading 24 h history for ${power} failed`, err);
     }

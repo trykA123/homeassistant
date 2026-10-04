@@ -10,6 +10,22 @@ export const APP_NAMES = {
 
 export const isOn = (stateObj) => stateObj?.state === 'on';
 
+const COLOR_MODES = ['hs', 'rgb', 'rgbw', 'rgbww', 'xy'];
+
+export function lightCapabilities(attributes) {
+  const modes = attributes.supported_color_modes ?? [];
+  return {
+    color: modes.some((m) => COLOR_MODES.includes(m)),
+    temperature: modes.includes('color_temp'),
+    dimmable: modes.some((m) => m !== 'onoff'),
+    minKelvin: attributes.min_color_temp_kelvin ?? 2200,
+    maxKelvin: attributes.max_color_temp_kelvin ?? 6500,
+  };
+}
+
+export const kelvinToPercent = (k, min, max) => Math.round(((k - min) / (max - min)) * 100);
+export const percentToKelvin = (p, min, max) => Math.round((min + (p / 100) * (max - min)) / 50) * 50;
+
 export function lightView(stateObj, pending) {
   const id = stateObj.entity_id;
   const brightness = stateObj.attributes.brightness;
@@ -22,6 +38,9 @@ export function lightView(stateObj, pending) {
     level: on ? level : 0,
     lastLevel: level || 50,
     unavailable: stateObj.state === 'unavailable',
+    rgb: stateObj.attributes.rgb_color ?? null,
+    kelvin: stateObj.attributes.color_temp_kelvin ?? null,
+    caps: lightCapabilities(stateObj.attributes),
   };
 }
 
@@ -79,4 +98,38 @@ export function bucketSeries(series, { now = Date.now(), hours = 24, buckets = 9
     out.push({ t: end, v: count ? sum / count : last });
   }
   return out;
+}
+
+export const SWATCHES = [
+  { name: 'Candle', kelvin: 2200 },
+  { name: 'Warm', kelvin: 2700 },
+  { name: 'Neutral', kelvin: 4000 },
+  { name: 'Daylight', kelvin: 6000 },
+  { name: 'Amber', rgb: [255, 150, 40] },
+  { name: 'Coral', rgb: [255, 90, 80] },
+  { name: 'Rose', rgb: [255, 70, 140] },
+  { name: 'Violet', rgb: [140, 80, 255] },
+  { name: 'Blue', rgb: [50, 110, 255] },
+  { name: 'Cyan', rgb: [30, 200, 255] },
+  { name: 'Mint', rgb: [40, 230, 160] },
+  { name: 'Green', rgb: [90, 220, 60] },
+];
+
+export function swatchCss(swatch) {
+  if (swatch.rgb) return `rgb(${swatch.rgb.join(' ')})`;
+  const t = (swatch.kelvin - 2200) / 3800;
+  return `oklch(${88 + t * 8}% ${0.12 - t * 0.11} ${70 + t * 160})`;
+}
+
+export function hexToRgb(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex ?? '');
+  if (!m) throw new Error(`not a #rrggbb colour: ${hex}`);
+  const n = Number.parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+export function swatchServiceData(swatch, light) {
+  if (swatch.rgb) return light.caps.color ? { rgb_color: swatch.rgb } : null;
+  if (light.caps.temperature) return { color_temp_kelvin: Math.min(light.caps.maxKelvin, Math.max(light.caps.minKelvin, swatch.kelvin)) };
+  return null;
 }
