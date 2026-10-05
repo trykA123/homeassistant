@@ -94,6 +94,8 @@ h1 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-52); line-heig
 .scenes { display: flex; gap: var(--space-2); margin-inline: calc(var(--space-5) * -1); padding-inline: var(--space-5); overflow-x: auto; scrollbar-width: none; }
 .select { width: 100%; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2); border-radius: var(--r-m); border: 1px solid var(--glass-line); background: var(--deck-card); text-align: left; }
 .select i, .menu-item i { width: 40px; height: 40px; flex: none; border-radius: var(--r-full); background: var(--sw); }
+.select i, .menu-item i { display: grid; place-items: center; color: oklch(99% 0 0); --mdc-icon-size: 22px; filter: drop-shadow(0 1px 2px oklch(0% 0 0 / .35)); }
+.menu-item i { --mdc-icon-size: 18px; }
 .select b { display: block; font-size: var(--fs-16); font-weight: 600; }
 .select .muted { display: block; }
 .menu-list { margin-top: var(--space-2); padding: var(--space-1); border-radius: var(--r-m); border: 1px solid var(--glass-line); background: oklch(18% .008 60 / .9); animation: drop var(--dur-ui) var(--ease-out) both; transform-origin: top center; }

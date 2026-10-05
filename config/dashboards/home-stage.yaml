@@ -13,18 +13,23 @@ views:
         scenes:
           - entity: scene.evening
             name: Evening
+            icon: mdi:weather-sunset
             swatch: "linear-gradient(135deg, oklch(82% .12 60), oklch(65% .14 35))"
           - entity: scene.relax
             name: Relax
+            icon: mdi:sofa-outline
             swatch: "linear-gradient(135deg, oklch(78% .1 20), oklch(60% .12 350))"
           - entity: script.movie_time
             name: Movie time
+            icon: mdi:movie-open-outline
             swatch: "linear-gradient(135deg, oklch(65% .12 240), oklch(45% .12 280))"
           - entity: scene.night
             name: Night
+            icon: mdi:weather-night
             swatch: "linear-gradient(135deg, oklch(45% .08 270), oklch(25% .05 270))"
           - entity: script.all_off
             name: All off
+            icon: mdi:power
             swatch: "oklch(30% 0 0)"
         tv:
           entity: media_player.tv

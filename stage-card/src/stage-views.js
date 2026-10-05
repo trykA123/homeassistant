@@ -57,7 +57,7 @@ function scenesSection(ctx) {
   const scenes = ctx.config.scenes ?? [];
   if (!scenes.length) return '';
   const active = scenes.find((s) => s.entity === ctx.activeScene) ?? lastUsedScene(ctx, scenes);
-  const swatch = (s) => `<i style="--sw:${esc(s?.swatch ?? 'var(--glass-hi)')}"></i>`;
+  const swatch = (s) => `<i style="--sw:${esc(s?.swatch ?? 'var(--glass-hi)')}">${s?.icon ? icon(s.icon) : ''}</i>`;
   const options = ctx.scenesOpen ? `<div class="menu-list" role="listbox" aria-label="Scenes">${scenes.map((s) => `<button class="menu-item" role="option" data-act="scene" data-arg="${s.entity}" aria-selected="${s === active}">${swatch(s)}<span class="grow">${esc(s.name)}</span>${s === active ? icon('mdi:check') : ''}</button>`).join('')}</div>` : '';
   return `<section class="sec"><h2>Scene</h2>
     <button class="select" data-act="scenes-menu" aria-haspopup="listbox" aria-expanded="${!!ctx.scenesOpen}">${swatch(active)}<span class="grow"><b>${esc(active?.name ?? 'Choose a scene')}</b>${active ? '<span class="muted">Last used</span>' : ''}</span>${icon(ctx.scenesOpen ? 'mdi:chevron-up' : 'mdi:chevron-down')}</button>${options}</section>`;
