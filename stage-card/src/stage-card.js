@@ -59,7 +59,7 @@ class StageCard extends HTMLElement {
   }
 
   ctx() {
-    return { hass: this._hass, config: this.config, pending: this.pending, excluded: this.excluded, activeScene: this.activeScene, history: this.history };
+    return { hass: this._hass, config: this.config, pending: this.pending, excluded: this.excluded, activeScene: this.activeScene, scenesOpen: this.scenesOpen, history: this.history };
   }
 
   render() {
@@ -165,7 +165,8 @@ class StageCard extends HTMLElement {
     const actions = {
       'toggle-light': () => this.call('light', 'toggle', { entity_id: arg }),
       toggle: () => this.call('homeassistant', 'toggle', { entity_id: arg }),
-      scene: () => { this.activeScene = arg; const [d, s] = serviceForScene(arg); this.call(d, s, { entity_id: arg }); },
+      scene: () => { this.activeScene = arg; this.scenesOpen = false; const [d, s] = serviceForScene(arg); this.call(d, s, { entity_id: arg }); },
+      'scenes-menu': () => { this.scenesOpen = !this.scenesOpen; },
       sheet: () => { this.sheet = arg || null; },
       go: () => this.goTo(+arg),
       key: () => this.call('remote', 'send_command', { entity_id: c.tv.remote, command: arg }),

@@ -32,7 +32,7 @@ ha-icon { --mdc-icon-size: 22px; display: inline-flex; }
 .num { font-variant-numeric: tabular-nums; }
 .stage { position: relative; height: 100dvh; overflow: hidden; background: #000; isolation: isolate; }
 
-.chrome { position: absolute; inset: 0 0 auto; z-index: var(--z-chrome); padding: calc(env(safe-area-inset-top) + 18px) var(--space-5) var(--space-3); background: linear-gradient(180deg, oklch(0% 0 0 / .5), transparent); }
+.chrome { position: absolute; inset: 0 0 auto; z-index: var(--z-chrome); padding: var(--space-3) var(--space-5) var(--space-3); background: linear-gradient(180deg, oklch(0% 0 0 / .5), transparent); }
 .chrome::before { content: ""; position: absolute; inset: 0; z-index: -1; background: oklch(12% .008 60 / .7); backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4); border-bottom: 1px solid var(--glass-line); opacity: 0; transition: opacity var(--dur-ui) var(--ease-out); }
 .chrome.solid::before { opacity: 1; }
 .bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
@@ -55,7 +55,7 @@ ha-icon { --mdc-icon-size: 22px; display: inline-flex; }
 .photo::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(70% 45% at 50% 42%, oklch(80% .12 70 / calc(var(--warmth, 0) * .32)), transparent 70%); mix-blend-mode: soft-light; }
 .photo::after { content: ""; position: absolute; inset: 0; z-index: 2; background: linear-gradient(180deg, oklch(0% 0 0 / .45) 0%, transparent 22%, transparent 38%, oklch(0% 0 0 / .35) 55%, oklch(8% .006 60 / .9) 80%, oklch(8% .006 60 / .96) 100%); }
 .content { position: relative; z-index: 3; width: min(100%, 560px); padding: 0 var(--space-5); }
-.hero { padding-top: calc(env(safe-area-inset-top) + 132px); }
+.hero { padding-top: 124px; }
 .eyebrow { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 var(--space-3); border-radius: var(--r-full); background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: var(--fs-12); font-weight: 500; }
 .chip ha-icon { --mdc-icon-size: 15px; }
@@ -90,6 +90,15 @@ h1 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-52); line-heig
 .sec + .sec { border-top: 1px solid oklch(100% 0 0 / .08); }
 .sec h2 { margin: 0 0 var(--space-3); font-size: var(--fs-12); letter-spacing: .16em; text-transform: uppercase; font-weight: 600; color: var(--ink-3); }
 .scenes { display: flex; gap: var(--space-2); margin-inline: calc(var(--space-5) * -1); padding-inline: var(--space-5); overflow-x: auto; scrollbar-width: none; }
+.select { width: 100%; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2); border-radius: var(--r-m); border: 1px solid var(--glass-line); background: var(--deck-card); text-align: left; }
+.select i, .menu-item i { width: 40px; height: 40px; flex: none; border-radius: var(--r-full); background: var(--sw); }
+.select b { display: block; font-size: var(--fs-16); font-weight: 600; }
+.select .muted { display: block; }
+.menu-list { margin-top: var(--space-2); padding: var(--space-1); border-radius: var(--r-m); border: 1px solid var(--glass-line); background: oklch(18% .008 60 / .9); animation: drop var(--dur-ui) var(--ease-out) both; transform-origin: top center; }
+.menu-item { width: 100%; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--r-s); font-size: var(--fs-14); font-weight: 500; text-align: left; transition: background var(--dur-fast) var(--ease-out); }
+.menu-item i { width: 32px; height: 32px; }
+.menu-item:active, .menu-item[aria-selected="true"] { background: oklch(100% 0 0 / .08); }
+@keyframes drop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
 .scene { flex: none; display: flex; align-items: center; gap: var(--space-2); height: 44px; padding: 0 var(--space-4) 0 6px; border-radius: var(--r-full); border: 1px solid var(--glass-line); background: var(--deck-card); font-size: var(--fs-14); font-weight: 500; transition: background var(--dur-ui) var(--ease-out), color var(--dur-ui) var(--ease-out); }
 .scene i { width: 32px; height: 32px; border-radius: var(--r-full); background: var(--sw); }
 .scene[aria-pressed="true"] { background: var(--ink); color: oklch(15% .01 60); }

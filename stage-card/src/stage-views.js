@@ -56,7 +56,21 @@ function chips(ctx, room) {
 function scenesSection(ctx) {
   const scenes = ctx.config.scenes ?? [];
   if (!scenes.length) return '';
-  return `<section class="sec"><h2>Scenes</h2><div class="scenes">${scenes.map((s) => `<button class="scene" data-act="scene" data-arg="${s.entity}" aria-pressed="${ctx.activeScene === s.entity}"><i style="--sw:${esc(s.swatch ?? 'var(--glass-hi)')}"></i>${esc(s.name)}</button>`).join('')}</div></section>`;
+  const active = scenes.find((s) => s.entity === ctx.activeScene) ?? lastUsedScene(ctx, scenes);
+  const swatch = (s) => `<i style="--sw:${esc(s?.swatch ?? 'var(--glass-hi)')}"></i>`;
+  const options = ctx.scenesOpen ? `<div class="menu-list" role="listbox" aria-label="Scenes">${scenes.map((s) => `<button class="menu-item" role="option" data-act="scene" data-arg="${s.entity}" aria-selected="${s === active}">${swatch(s)}<span class="grow">${esc(s.name)}</span>${s === active ? icon('mdi:check') : ''}</button>`).join('')}</div>` : '';
+  return `<section class="sec"><h2>Scene</h2>
+    <button class="select" data-act="scenes-menu" aria-haspopup="listbox" aria-expanded="${!!ctx.scenesOpen}">${swatch(active)}<span class="grow"><b>${esc(active?.name ?? 'Choose a scene')}</b>${active ? '<span class="muted">Last used</span>' : ''}</span>${icon(ctx.scenesOpen ? 'mdi:chevron-up' : 'mdi:chevron-down')}</button>${options}</section>`;
+}
+
+export function lastUsedScene(ctx, scenes) {
+  const when = (s) => {
+    const state = st(ctx, s.entity);
+    const t = Date.parse(s.entity.startsWith('script.') ? state?.attributes.last_triggered : state?.state);
+    return Number.isFinite(t) ? t : 0;
+  };
+  const best = scenes.reduce((a, b) => (when(b) > when(a) ? b : a));
+  return when(best) ? best : null;
 }
 
 function nowPlayingSection(ctx) {
