@@ -1,0 +1,18 @@
+- id: wind_down
+  alias: Wind Down at 23:00
+  description: Transition living room lights to 30% at 2500K if any are on at 23:00.
+  triggers:
+    - trigger: time
+      at: "23:00:00"
+  conditions:
+    - condition: state
+      entity_id: light.living_room_lights
+      state: "on"
+  actions:
+    - action: light.turn_on
+      target:
+        entity_id: light.living_room_lights
+      data:
+        brightness_pct: 30
+        color_temp_kelvin: 2500
+        transition: 600

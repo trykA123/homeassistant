@@ -1,0 +1,549 @@
+# Dashboard: "Deck" — The Machined Synth Console (Tactile Audiophile Hardware)
+# Persona: Hardware Enthusiast / Audio Engineer.
+# Anodized charcoal metal, mechanical rocker switches, analog LED jewels, and physical ganged bus sync.
+# Mobile-optimized for iPhone 17 (393px width) & desktop.
+
+button_card_templates:
+  deck_bus_header:
+    show_icon: false
+    show_name: false
+    show_state: false
+    triggers_update:
+      - input_boolean.sync_light_colors
+      - sensor.living_room_lights_on
+    custom_fields:
+      console: >-
+        [[[
+          const synced = states['input_boolean.sync_light_colors']?.state === 'on';
+          const onCount = Number(states['sensor.living_room_lights_on']?.state || 0);
+          return `
+            <div class="deck-frame">
+              <div class="brand-row">
+                <span class="mfr">DECK // MK-IV CONSOLE</span>
+                <span class="model">${synced ? 'BUS GANGED' : 'BUS ISOLATED'}</span>
+              </div>
+              <div class="control-row">
+                <div class="bus-info">
+                  <span class="bus-title">MASTER LIGHTING BUS</span>
+                  <span class="bus-meta">${onCount}/3 CHANNELS LIVE · 44.1 kHz</span>
+                </div>
+                <div class="gang-switch ${synced ? 'engaged' : ''}" id="gang-toggle">
+                  <div class="led-jewel"></div>
+                  <div class="gang-labels">
+                    <span class="gang-tag">GANG BUS</span>
+                    <span class="gang-state">${synced ? 'LINKED' : 'OFF'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        ]]]
+    styles:
+      card:
+        - padding: 0
+        - background: none
+        - border: none
+        - box-shadow: none
+        - overflow: visible
+      grid:
+        - grid-template-areas: '"console"'
+      custom_fields:
+        console:
+          - width: 100%
+    extra_styles: |
+      .deck-frame {
+        padding: 14px 16px;
+        background: #181b20;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 12px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 24px -10px rgba(0, 0, 0, 0.85);
+      }
+      .brand-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        color: #656d78;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .control-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+        gap: 10px;
+      }
+      .bus-title {
+        display: block;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        color: #e6e8eb;
+        line-height: 1.1;
+      }
+      .bus-meta {
+        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 10.5px;
+        color: #8c96a3;
+      }
+      .gang-switch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 8px;
+        background: #121417;
+        border: 1px solid #2a2e36;
+        cursor: pointer;
+        transition: all 120ms ease;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+        flex-shrink: 0;
+      }
+      .gang-switch.engaged {
+        border-color: #ff9d00;
+        background: #1c1812;
+      }
+      .led-jewel {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #353b45;
+        border: 1px solid #1a1c21;
+        transition: all 120ms ease;
+      }
+      .gang-switch.engaged .led-jewel {
+        background: #ff9d00;
+        box-shadow: 0 0 10px #ff9d00;
+      }
+      .gang-labels {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .gang-tag {
+        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 9px;
+        letter-spacing: 0.12em;
+        color: #78818c;
+      }
+      .gang-state {
+        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 11px;
+        font-weight: 700;
+        color: #9aa4b2;
+        line-height: 1.1;
+      }
+      .gang-switch.engaged .gang-state {
+        color: #ff9d00;
+      }
+    custom_field_tap_action:
+      console:
+        action: perform-action
+        perform_action: input_boolean.toggle
+        target:
+          entity_id: input_boolean.sync_light_colors
+
+title: Deck
+views:
+  - title: Console
+    path: console
+    icon: mdi:tune-vertical
+    theme: Deck
+    type: sections
+    max_columns: 3
+    dense_section_placement: true
+    sections:
+      # ── Master Bus Header & Master Fader ─────────────────────────
+      - type: grid
+        column_span: 3
+        cards:
+          - type: custom:button-card
+            template: deck_bus_header
+            grid_options: { columns: full }
+
+          # Master Gang Fader Card
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: #181b20;
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                  border-radius: 12px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.living_room_lights
+                name: MASTER CHROMA BUS
+                icon: mdi:console-line
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              
+              # Stepped Hardware Kelvin Switches
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2.2K"
+                    icon: mdi:flash
+                    icon_color: amber
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2.7K"
+                    icon: mdi:flash
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4.0K"
+                    icon: mdi:flash
+                    icon_color: yellow
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6.5K"
+                    icon: mdi:flash
+                    icon_color: blue
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 6500 }
+
+              # Stepped Hardware Color Gels
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "AMB"
+                    icon: mdi:square
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [255, 160, 30] }
+                  - type: template
+                    content: "RUB"
+                    icon: mdi:square
+                    icon_color: red
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [255, 40, 70] }
+                  - type: template
+                    content: "CYN"
+                    icon: mdi:square
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [0, 220, 255] }
+                  - type: template
+                    content: "IND"
+                    icon: mdi:square
+                    icon_color: purple
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [140, 60, 255] }
+
+      # ── Channel 01: Lamp One ─────────────────────────────────────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: #181b20;
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                  border-radius: 12px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.light_1
+                name: CH 01 // LAMP ONE
+                icon: mdi:floor-lamp-outline
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2.2K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2.7K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4.0K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6.5K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 6500 }
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "AMBER"
+                    icon: mdi:square
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { rgb_color: [255, 160, 30] }
+                  - type: template
+                    content: "CYAN"
+                    icon: mdi:square
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { rgb_color: [0, 220, 255] }
+                  - type: template
+                    content: "WHEEL"
+                    icon: mdi:palette
+                    tap_action:
+                      action: more-info
+                      entity: light.light_1
+
+      # ── Channel 02: Lamp Two ─────────────────────────────────────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: #181b20;
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                  border-radius: 12px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.light_2
+                name: CH 02 // LAMP TWO
+                icon: mdi:floor-lamp-outline
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2.2K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2.7K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4.0K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6.5K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 6500 }
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "AMBER"
+                    icon: mdi:square
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { rgb_color: [255, 160, 30] }
+                  - type: template
+                    content: "CYAN"
+                    icon: mdi:square
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { rgb_color: [0, 220, 255] }
+                  - type: template
+                    content: "WHEEL"
+                    icon: mdi:palette
+                    tap_action:
+                      action: more-info
+                      entity: light.light_2
+
+      # ── Channel 03: Govee LED Strip ──────────────────────────────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: #181b20;
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                  border-radius: 12px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.h619a
+                name: CH 03 // GOVEE STRIP
+                icon: mdi:led-strip-variant
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2.2K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2.7K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4.0K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6.5K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 6500 }
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "AMBER"
+                    icon: mdi:square
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { rgb_color: [255, 160, 30] }
+                  - type: template
+                    content: "CYAN"
+                    icon: mdi:square
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { rgb_color: [0, 220, 255] }
+                  - type: template
+                    content: "WHEEL"
+                    icon: mdi:palette
+                    tap_action:
+                      action: more-info
+                      entity: light.h619a
+
+      # ── AV Deck: TV & Ambilight ──────────────────────────────────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: #181b20;
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                  border-radius: 12px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.tv_ambilight
+                name: AV // TV AMBILIGHT
+                icon: mdi:television-ambient-light
+                show_brightness_control: true
+                show_color_control: true
+                use_light_color: true
+              - type: custom:mushroom-media-player-card
+                entity: media_player.tv
+                name: AV // PHILIPS 65″ MONITOR
+                icon: mdi:television
+                show_volume_level: true
+                volume_controls:
+                  - volume_buttons
+                  - volume_set
+                media_controls:
+                  - on_off
+                  - play_pause_stop

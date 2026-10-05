@@ -1,0 +1,231 @@
+# Prototype 2 — "Thumb": one-hand phone remote (portrait, ~390x844).
+# Design read: one person on a phone wants to change a light in under 2 seconds;
+# graphite monochrome; the ONLY colour on screen is the real colour of each light.
+# Dials: variance 5 / motion 4 / density 4.
+# Rule: each light row IS the slider (drag anywhere). Tap icon = toggle. Hold = details.
+# The desk plug is shown as a reading only. It never gets a power control.
+# Source of truth for the storage dashboard /proto-thumb (pushed by scripts/push-dashboards.mjs).
+
+button_card_templates:
+  thumb_scene:
+    show_icon: true
+    show_name: true
+    show_state: false
+    tap_action:
+      action: perform-action
+      perform_action: "[[[ return entity.entity_id.startsWith('script.') ? 'script.turn_on' : 'scene.turn_on' ]]]"
+      target:
+        entity_id: "[[[ return entity.entity_id ]]]"
+      haptic: success
+    styles:
+      card:
+        - height: 64px
+        - padding: 0 14px
+        - border-radius: 18px
+        - background: "#1a1a1a"
+      grid:
+        - grid-template-areas: '"i n"'
+        - grid-template-columns: 22px 1fr
+        - column-gap: 10px
+      img_cell: [width: 22px, height: 22px]
+      icon: [width: 20px, color: "#efedea"]
+      name:
+        - justify-self: start
+        - font-size: 15px
+        - font-weight: 600
+    extra_styles: |
+      ha-card { transition: transform 120ms ease, background 200ms ease; }
+      ha-card:active { transform: scale(.96); background: #262626 !important; }
+
+title: Thumb
+views:
+  - title: Remote
+    path: remote
+    icon: mdi:gesture-tap
+    theme: Graphite
+    type: sections
+    max_columns: 1
+    sections:
+      - type: grid
+        cards:
+          # ── Status line: answers "what is on right now?" in one read ──
+          - type: custom:button-card
+            entity: sensor.living_room_lights_on
+            show_icon: false
+            show_name: false
+            show_state: false
+            tap_action: { action: none }
+            grid_options: { columns: full }
+            triggers_update:
+              - sensor.home_greeting
+              - media_player.tv
+              - sensor.birou_current_consumption
+              - sensor.unavailable_devices
+              - weather.forecast_home
+            custom_fields:
+              head: >-
+                [[[
+                  const w = states['weather.forecast_home'];
+                  const t = w ? Math.round(w.attributes.temperature) + '°' : '';
+                  return `<div class="head"><span>${states['sensor.home_greeting']?.state ?? 'Hello'}</span><span class="t">${t}</span></div>`;
+                ]]]
+              chips: >-
+                [[[
+                  const lit = Number(entity.state) || 0;
+                  const tv = states['media_player.tv']?.state === 'on';
+                  const watt = Math.round(Number(states['sensor.birou_current_consumption']?.state) || 0);
+                  const off = Number(states['sensor.unavailable_devices']?.state) || 0;
+                  const chip = (on, txt) => `<span class="c ${on ? 'on' : ''}">${txt}</span>`;
+                  return chip(lit > 0, lit === 0 ? 'Lights off' : `${lit} light${lit > 1 ? 's' : ''} on`)
+                    + chip(tv, tv ? 'TV on' : 'TV off')
+                    + chip(watt > 5, `Desk ${watt} W`)
+                    + (off ? `<span class="c warn">${off} offline</span>` : '');
+                ]]]
+            styles:
+              card: [padding: 6px 2px 4px, background: none]
+              grid:
+                - grid-template-areas: '"head" "chips"'
+                - row-gap: 12px
+              custom_fields:
+                head: [justify-self: stretch]
+                chips: [justify-self: start]
+            extra_styles: |
+              .head { display: flex; justify-content: space-between; align-items: baseline; font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+              .head .t { font-size: 18px; font-weight: 500; color: var(--secondary-text-color); }
+              #chips { display: flex; flex-wrap: wrap; gap: 6px; }
+              .c { padding: 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; background: #1a1a1a; color: #8d8a86; }
+              .c.on { background: #efedea; color: #121212; }
+              .c.warn { background: rgba(255,122,107,.14); color: #ff7a6b; }
+
+          # ── Lights: full-width drag sliders ───────────────────────────
+          - type: custom:bubble-card
+            card_type: separator
+            name: Lights
+            icon: mdi:lightbulb-outline
+            grid_options: { columns: full }
+          - type: custom:bubble-card
+            card_type: button
+            button_type: slider
+            entity: light.living_room_lights
+            name: All lamps
+            icon: mdi:lightbulb-group-outline
+            show_state: true
+            show_attribute: false
+            card_layout: large
+            tap_action: { action: toggle, haptic: light }
+            hold_action: { action: more-info }
+            grid_options: { columns: full, rows: 1 }
+          - type: custom:bubble-card
+            card_type: button
+            button_type: slider
+            entity: light.light_1
+            name: Lamp one
+            icon: mdi:floor-lamp-outline
+            show_state: true
+            card_layout: large
+            tap_action: { action: toggle, haptic: light }
+            hold_action: { action: more-info }
+            grid_options: { columns: full, rows: 1 }
+          - type: custom:bubble-card
+            card_type: button
+            button_type: slider
+            entity: light.light_2
+            name: Lamp two
+            icon: mdi:floor-lamp-outline
+            show_state: true
+            card_layout: large
+            tap_action: { action: toggle, haptic: light }
+            hold_action: { action: more-info }
+            grid_options: { columns: full, rows: 1 }
+          - type: custom:bubble-card
+            card_type: button
+            button_type: slider
+            entity: light.h619a
+            name: LED strip
+            icon: mdi:led-strip-variant
+            show_state: true
+            card_layout: large
+            tap_action: { action: toggle, haptic: light }
+            hold_action: { action: more-info }
+            grid_options: { columns: full, rows: 1 }
+
+          # ── Moments: 2x2, big tap targets (64 px) ─────────────────────
+          - type: custom:bubble-card
+            card_type: separator
+            name: Moments
+            icon: mdi:star-four-points-outline
+            grid_options: { columns: full }
+          - type: custom:button-card
+            template: thumb_scene
+            entity: script.movie_time
+            name: Movie
+            icon: mdi:movie-open-outline
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: thumb_scene
+            entity: scene.evening
+            name: Evening
+            icon: mdi:weather-sunset
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: thumb_scene
+            entity: scene.relax
+            name: Relax
+            icon: mdi:sofa-outline
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: thumb_scene
+            entity: script.all_off
+            name: All off
+            icon: mdi:power
+            grid_options: { columns: 6 }
+
+          # ── TV ────────────────────────────────────────────────────────
+          - type: custom:bubble-card
+            card_type: separator
+            name: TV
+            icon: mdi:television
+            grid_options: { columns: full }
+          - type: custom:bubble-card
+            card_type: media-player
+            entity: media_player.tv
+            name: Philips TV
+            icon: mdi:television
+            card_layout: large
+            hide:
+              play_pause_button: false
+              volume_button: false
+              previous_button: true
+              next_button: true
+            grid_options: { columns: full, rows: 1 }
+          - type: custom:bubble-card
+            card_type: button
+            button_type: slider
+            entity: light.tv_ambilight
+            name: Ambilight
+            icon: mdi:television-ambient-light
+            show_state: true
+            card_layout: large
+            tap_action: { action: toggle, haptic: light }
+            hold_action: { action: more-info }
+            grid_options: { columns: full, rows: 1 }
+
+          # ── Desk: reading only, never a toggle ───────────────────────
+          - type: custom:bubble-card
+            card_type: button
+            button_type: state
+            entity: sensor.birou_current_consumption
+            name: Desk power
+            icon: mdi:desktop-tower-monitor
+            show_state: true
+            card_layout: large
+            tap_action: { action: more-info }
+            button_action: { tap_action: { action: more-info } }
+            sub_button:
+              - entity: sensor.desk_cost_today
+                name: Today
+                icon: mdi:cash
+                show_state: true
+                show_background: false
+                tap_action: { action: more-info }
+            grid_options: { columns: full, rows: 1 }

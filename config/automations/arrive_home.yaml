@@ -1,0 +1,19 @@
+- id: arrive_home
+  alias: Arrive Home
+  description: Turn on evening scene when owner arrives home after sunset.
+  triggers:
+    - trigger: state
+      entity_id: person.claud
+      to: home
+      for: "00:02:00"
+      not_from:
+        - unavailable
+        - unknown
+  conditions:
+    - condition: state
+      entity_id: sun.sun
+      state: below_horizon
+  actions:
+    - action: scene.turn_on
+      target:
+        entity_id: scene.evening

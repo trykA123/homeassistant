@@ -1,0 +1,61 @@
+- id: evening
+  name: Evening
+  entities:
+    light.light_1:
+      state: on
+      brightness_pct: 60
+      color_temp_kelvin: 2700
+    light.light_2:
+      state: on
+      brightness_pct: 60
+      color_temp_kelvin: 2700
+    light.h619a:
+      state: on
+      brightness_pct: 40
+      rgb_color: [255, 100, 30]
+
+- id: relax
+  name: Relax
+  entities:
+    light.light_1:
+      state: on
+      brightness_pct: 30
+      color_temp_kelvin: 2500
+    light.light_2:
+      state: on
+      brightness_pct: 30
+      color_temp_kelvin: 2500
+    light.h619a:
+      state: on
+      brightness_pct: 25
+      rgb_color: [255, 115, 45]
+
+- id: night
+  name: Night
+  entities:
+    light.light_1:
+      state: off
+    light.light_2:
+      state: off
+    light.h619a:
+      state: on
+      brightness_pct: 8
+      rgb_color: [255, 90, 30]
+
+- id: morning
+  name: Morning
+  entities:
+    light.light_1:
+      state: on
+      brightness_pct: 35
+      color_temp_kelvin: 4000
+    light.light_2:
+      state: on
+      brightness_pct: 35
+      color_temp_kelvin: 4000
+    light.h619a:
+      state: off
+    light.tv_ambilight:
+      state: off
+    light.bedside_lamp:
+      state: off

@@ -20,7 +20,17 @@ config/backups/
 config/image/
 config/.HA_VERSION
 config/.uuid
+__pycache__/
+*.pyc
 
 # Editors / OS
 .DS_Store
 *.swp
+
+# Local backups (contain secrets copies), runtime and third-party downloads
+backups/
+config/ip_bans.yaml
+config/ip_bans.yaml.bak
+config/.ha_run.lock
+config/www/community/
+config/custom_components/hacs/

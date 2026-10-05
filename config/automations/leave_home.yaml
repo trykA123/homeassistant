@@ -1,0 +1,82 @@
+- id: leave_home
+  alias: Leave Home
+  description: Turn off lights and TV when owner leaves, with notification.
+  triggers:
+    - trigger: state
+      entity_id: person.claud
+      to: not_home
+      for: "00:02:00"
+      not_from:
+        - unavailable
+        - unknown
+  actions:
+    - variables:
+        turned_off: []
+    - if:
+        - condition: state
+          entity_id: light.light_1
+          state: "on"
+      then:
+        - action: light.turn_off
+          target:
+            entity_id: light.light_1
+        - variables:
+            turned_off: "{{ turned_off + ['Ceiling 1'] }}"
+    - if:
+        - condition: state
+          entity_id: light.light_2
+          state: "on"
+      then:
+        - action: light.turn_off
+          target:
+            entity_id: light.light_2
+        - variables:
+            turned_off: "{{ turned_off + ['Ceiling 2'] }}"
+    - if:
+        - condition: state
+          entity_id: light.h619a
+          state: "on"
+      then:
+        - action: light.turn_off
+          target:
+            entity_id: light.h619a
+        - variables:
+            turned_off: "{{ turned_off + ['LED strip'] }}"
+    - if:
+        - condition: state
+          entity_id: light.bedside_lamp
+          state: "on"
+      then:
+        - action: light.turn_off
+          target:
+            entity_id: light.bedside_lamp
+        - variables:
+            turned_off: "{{ turned_off + ['Bedside lamp'] }}"
+    - if:
+        - condition: state
+          entity_id: fan.bedroom_fan
+          state: "on"
+      then:
+        - action: fan.turn_off
+          target:
+            entity_id: fan.bedroom_fan
+        - variables:
+            turned_off: "{{ turned_off + ['Fan'] }}"
+    - if:
+        - condition: state
+          entity_id: media_player.tv
+          state: "on"
+      then:
+        - action: media_player.turn_off
+          target:
+            entity_id: media_player.tv
+        - variables:
+            turned_off: "{{ turned_off + ['TV'] }}"
+    - if:
+        - condition: template
+          value_template: "{{ turned_off | count > 0 }}"
+      then:
+        - action: notify.mobile_app_iphone
+          data:
+            title: You left home
+            message: "Turned off: {{ turned_off | join(', ') }}"

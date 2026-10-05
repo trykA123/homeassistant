@@ -1,0 +1,71 @@
+rest_command:
+  ntfy_homeassistant:
+    url: https://ntfy.erzago.duckdns.org/homelab-homeassistant
+    method: post
+    headers:
+      Authorization: !secret ntfy_auth_header
+      Title: "{{ title }}"
+      Priority: "{{ priority | default('3') }}"
+      Tags: "{{ tags | default('house') }}"
+    payload: "{{ message }}"
+    content_type: "text/plain; charset=utf-8"
+
+script:
+  notify_home:
+    alias: Notify home
+    mode: queued
+    fields:
+      title:
+        description: Short title
+      message:
+        description: Body text
+      priority:
+        description: ntfy priority 1-5
+        default: 3
+    sequence:
+      - action: notify.mobile_app_iphone
+        continue_on_error: true
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+      - action: rest_command.ntfy_homeassistant
+        continue_on_error: true
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          priority: "{{ priority | default(3) }}"
+
+automation:
+  - id: home_devices_offline
+    alias: "Home · devices offline"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.unavailable_devices
+        above: 0
+        for:
+          minutes: 30
+    actions:
+      - action: script.notify_home
+        data:
+          title: Devices offline
+          message: >-
+            {{ states('sensor.unavailable_devices') }} device(s) have been offline for 30 minutes.
+            {{ state_attr('sensor.unavailable_devices', 'names') | default('', true) }}
+          priority: 3
+
+  - id: home_backup_failed
+    alias: "Home · backup failed"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: event.backup_automatic_backup
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.to_state.attributes.event_type == 'failed' }}"
+    actions:
+      - action: script.notify_home
+        data:
+          title: Backup failed
+          message: The nightly Home Assistant backup failed. Check Settings → System → Backups.
+          priority: 5

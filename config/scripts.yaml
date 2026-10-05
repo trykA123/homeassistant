@@ -1,0 +1,120 @@
+movie_time:
+  alias: Movie Time
+  icon: mdi:movie-open
+  mode: restart
+  sequence:
+    # Let the mood lighting respond at once, and restore it if the TV cannot wake.
+    - action: scene.create
+      data:
+        scene_id: movie_time_previous_strip
+        snapshot_entities:
+          - light.h619a
+    - action: light.turn_on
+      target:
+        entity_id: light.h619a
+      data:
+        brightness_pct: 25
+        rgb_color: [255, 115, 45]
+    # Android TV Remote sends the TV's Power key without opening a Cast screen.
+    - action: media_player.turn_on
+      target:
+        entity_id: media_player.tv_3
+    - wait_template: >-
+        {{ is_state('media_player.tv_3', 'on')
+           and is_state('media_player.tv', 'on')
+           and is_state('switch.tv_screen_state', 'on') }}
+      timeout: "00:01:00"
+      continue_on_timeout: true
+    - if:
+        - condition: template
+          value_template: "{{ not wait.completed }}"
+      then:
+        - action: scene.turn_on
+          target:
+            entity_id: scene.movie_time_previous_strip
+        - action: scene.delete
+          target:
+            entity_id: scene.movie_time_previous_strip
+        - action: persistent_notification.create
+          data:
+            notification_id: movie_time_tv_wake
+            title: Movie Time could not start
+            message: The Philips TV stayed off. Check its network standby settings and try again.
+        - stop: The Philips TV did not wake.
+    - action: persistent_notification.dismiss
+      data:
+        notification_id: movie_time_tv_wake
+    - delay: "00:00:02"
+    - action: media_player.play_media
+      target:
+        entity_id: media_player.tv
+      data:
+        media_content_type: app
+        media_content_id: com.github.damontecres.wholphin.MainActivity-com.github.damontecres.wholphin
+    - wait_template: >-
+        {{ state_attr('remote.tv', 'current_activity')
+           == 'com.github.damontecres.wholphin' }}
+      timeout: "00:00:20"
+      continue_on_timeout: true
+    - if:
+        - condition: template
+          value_template: "{{ not wait.completed }}"
+      then:
+        - action: persistent_notification.create
+          data:
+            notification_id: movie_time_app_launch
+            title: Movie Time needs attention
+            message: The TV woke, but Wholphin did not open. Try Movie Time again.
+        - stop: Wholphin did not open.
+    - action: persistent_notification.dismiss
+      data:
+        notification_id: movie_time_app_launch
+    - action: light.turn_on
+      target:
+        entity_id: light.tv_ambilight
+      data:
+        effect: "Mode: expert"
+      continue_on_error: true
+    - action: scene.delete
+      target:
+        entity_id: scene.movie_time_previous_strip
+
+all_off:
+  alias: All Off
+  icon: mdi:power-off
+  mode: restart
+  sequence:
+    - action: light.turn_off
+      target:
+        entity_id:
+          - light.light_1
+          - light.light_2
+          - light.h619a
+    - action: light.turn_off
+      target:
+        entity_id: light.tv_ambilight
+      continue_on_error: true
+    - action: media_player.turn_off
+      target:
+        entity_id: media_player.tv
+
+good_morning:
+  alias: Good morning
+  icon: mdi:weather-sunset-up
+  mode: single
+  sequence:
+    - action: scene.turn_on
+      target:
+        entity_id: scene.morning
+    - action: remote.turn_on
+      target:
+        entity_id: remote.tv
+    - wait_template: "{{ is_state('remote.tv', 'on') }}"
+      timeout: "00:01:00"
+      continue_on_timeout: false
+    - delay: "00:00:03"
+    - action: remote.turn_on
+      target:
+        entity_id: remote.tv
+      data:
+        activity: ltva3://morning

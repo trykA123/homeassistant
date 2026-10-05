@@ -3,8 +3,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-[ -f .env ] || cp .env.example .env
-[ -f config/secrets.yaml ] || cp config/secrets.yaml.example config/secrets.yaml
+[ -f .env ] || install -m 600 .env.example .env
+[ -f config/secrets.yaml ] || install -m 600 config/secrets.yaml.example config/secrets.yaml
+chmod 600 .env config/secrets.yaml
 
 if [ ! -f mosquitto/config/passwd ]; then
   read -rp "MQTT username [homeassistant]: " user

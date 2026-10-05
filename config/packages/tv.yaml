@@ -1,0 +1,18 @@
+automation:
+  - id: tv_skip_tuner_on_start
+    alias: "TV · skip the tuner at power on"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: media_player.tv
+        from: "off"
+        to: "on"
+    actions:
+      - delay: "00:00:08"
+      - condition: template
+        value_template: "{{ state_attr('media_player.tv', 'source') == 'Watch TV' or state_attr('remote.tv', 'current_activity') in ['org.droidtv.playtv', 'org.droidtv.zapster'] }}"
+      - action: remote.send_command
+        target:
+          entity_id: remote.tv
+        data:
+          command: HOME

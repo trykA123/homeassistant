@@ -1,0 +1,741 @@
+# Dashboard: "Spatial" — The Architectural Living Room Canvas
+# Persona: Architect / VisionOS spatial computing lover.
+# Top-down living room spatial floorplan with light beacons, dynamic ambient bloom, and spatial sync harmony.
+# Mobile-optimized for iPhone 17 (393px width) & desktop.
+
+button_card_templates:
+  spatial_room_blueprint:
+    show_icon: false
+    show_name: false
+    show_state: false
+    triggers_update:
+      - input_boolean.sync_light_colors
+      - light.light_1
+      - light.light_2
+      - light.h619a
+      - light.tv_ambilight
+      - media_player.tv
+      - switch.birou
+    custom_fields:
+      plan: >-
+        [[[
+          const synced = states['input_boolean.sync_light_colors']?.state === 'on';
+          
+          const getLight = (id, defaultColor) => {
+            const s = states[id];
+            const on = s?.state === 'on';
+            const rgb = s?.attributes?.rgb_color;
+            const bri = Math.round((s?.attributes?.brightness ?? 255) / 2.55);
+            return {
+              on,
+              color: rgb ? `rgb(${rgb.join(',')})` : defaultColor,
+              bri: on ? bri : 0
+            };
+          };
+
+          const l1 = getLight('light.light_1', '#ffaa40');
+          const l2 = getLight('light.light_2', '#ffaa40');
+          const strip = getLight('light.h619a', '#ff4785');
+          const ambi = getLight('light.tv_ambilight', '#00d0ff');
+          const tvOn = states['media_player.tv']?.state === 'on';
+          const deskOn = states['switch.birou']?.state === 'on';
+
+          return `
+            <div class="spatial-canvas">
+              <div class="canvas-header">
+                <div>
+                  <span class="spatial-tag">SPATIAL COMPUTING</span>
+                  <h2 class="spatial-title">Room Topology</h2>
+                </div>
+                <div class="sync-pill ${synced ? 'locked' : ''}">
+                  <span class="sync-dot"></span>
+                  <span class="sync-text">${synced ? 'HARMONIZED' : 'DECOUPLED'}</span>
+                </div>
+              </div>
+
+              <!-- Top-down Living Room Blueprint -->
+              <div class="blueprint-stage">
+                <!-- Perimeter Wall Govee Strip -->
+                <div class="fixture strip-wall ${strip.on ? 'lit' : ''}" style="--glow-color:${strip.color};">
+                  <div class="strip-beam"></div>
+                  <span class="fix-label">GOVEE STRIP</span>
+                </div>
+
+                <!-- Center Entertainment Unit -->
+                <div class="fixture tv-unit ${tvOn ? 'active' : ''}">
+                  <div class="tv-screen">
+                    <ha-icon icon="mdi:television"></ha-icon>
+                    <span>TV 65″</span>
+                  </div>
+                  <div class="ambi-halo ${ambi.on ? 'lit' : ''}" style="--glow-color:${ambi.color};"></div>
+                </div>
+
+                <!-- Left: Lamp One -->
+                <div class="fixture lamp-left ${l1.on ? 'lit' : ''}" style="--glow-color:${l1.color};">
+                  <div class="light-cone"></div>
+                  <div class="fixture-node">
+                    <ha-icon icon="mdi:floor-lamp"></ha-icon>
+                  </div>
+                  <span class="node-name">LAMP 1</span>
+                </div>
+
+                <!-- Center Sync Core -->
+                <div class="fixture sync-core ${synced ? 'active' : ''}">
+                  <div class="core-wave"></div>
+                  <div class="core-orb">
+                    <ha-icon icon="mdi:palette-swatch"></ha-icon>
+                  </div>
+                  <span class="core-title">SYNC</span>
+                </div>
+
+                <!-- Right: Lamp Two -->
+                <div class="fixture lamp-right ${l2.on ? 'lit' : ''}" style="--glow-color:${l2.color};">
+                  <div class="light-cone"></div>
+                  <div class="fixture-node">
+                    <ha-icon icon="mdi:floor-lamp"></ha-icon>
+                  </div>
+                  <span class="node-name">LAMP 2</span>
+                </div>
+
+                <!-- Corner: Workstation Desk -->
+                <div class="fixture desk-corner ${deskOn ? 'active' : ''}">
+                  <div class="desk-surface">
+                    <ha-icon icon="mdi:desktop-tower-monitor"></ha-icon>
+                    <span>DESK</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        ]]]
+    styles:
+      card:
+        - padding: 0
+        - background: none
+        - border: none
+        - box-shadow: none
+        - overflow: visible
+      grid:
+        - grid-template-areas: '"plan"'
+      custom_fields:
+        plan:
+          - width: 100%
+    extra_styles: |
+      ha-icon {
+        --mdc-icon-size: 16px;
+        width: 16px;
+        height: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .spatial-canvas {
+        padding: 14px 16px;
+        background: rgba(18, 22, 31, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+      }
+      .canvas-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .spatial-tag {
+        font-size: 9.5px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: #7b869e;
+        text-transform: uppercase;
+      }
+      .spatial-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #f5f7fa;
+        line-height: 1.1;
+      }
+      .sync-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+        transition: all 180ms ease;
+      }
+      .sync-pill.locked {
+        background: rgba(79, 140, 255, 0.15);
+        border-color: rgba(79, 140, 255, 0.5);
+        box-shadow: 0 0 16px -2px rgba(79, 140, 255, 0.4);
+      }
+      .sync-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #5a6478;
+        transition: all 180ms ease;
+      }
+      .sync-pill.locked .sync-dot {
+        background: #4f8cff;
+        box-shadow: 0 0 6px #4f8cff;
+      }
+      .sync-text {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #f5f7fa;
+      }
+      .blueprint-stage {
+        position: relative;
+        height: 140px;
+        border-radius: 14px;
+        background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02) 0%, rgba(0, 0, 0, 0.35) 100%);
+        border: 1px dashed rgba(255, 255, 255, 0.12);
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: auto 1fr auto;
+        padding: 10px 14px;
+        align-items: center;
+        justify-items: center;
+      }
+      .strip-wall {
+        grid-column: 1 / 4;
+        width: 92%;
+        height: 8px;
+        border-radius: 4px;
+        background: #252b38;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 250ms ease;
+      }
+      .strip-wall.lit {
+        background: var(--glow-color);
+        box-shadow: 0 0 20px var(--glow-color);
+      }
+      .strip-wall .fix-label {
+        position: absolute;
+        top: -14px;
+        font-size: 8.5px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: #65718a;
+      }
+      .tv-unit {
+        grid-column: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+      }
+      .tv-screen {
+        padding: 4px 10px;
+        border-radius: 8px;
+        background: #181d26;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 9.5px;
+        font-weight: 700;
+        color: #f5f7fa;
+        z-index: 2;
+      }
+      .tv-unit.active .tv-screen {
+        background: #232c3d;
+        border-color: #4f8cff;
+        box-shadow: 0 0 12px rgba(79, 140, 255, 0.4);
+      }
+      .ambi-halo.lit {
+        position: absolute;
+        top: -10px;
+        left: -14px;
+        right: -14px;
+        bottom: -10px;
+        border-radius: 12px;
+        background: var(--glow-color);
+        opacity: 0.35;
+        filter: blur(12px);
+        z-index: 1;
+      }
+      .lamp-left {
+        grid-column: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+      }
+      .lamp-right {
+        grid-column: 3;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+      }
+      .fixture-node {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #181d26;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #7b869e;
+        transition: all 200ms ease;
+      }
+      .lamp-left.lit .fixture-node, .lamp-right.lit .fixture-node {
+        background: var(--glow-color);
+        color: #12161f;
+        box-shadow: 0 0 16px var(--glow-color);
+      }
+      .node-name {
+        font-size: 8.5px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #8a94a6;
+      }
+      .sync-core {
+        grid-column: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        cursor: pointer;
+      }
+      .core-orb {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #1e2433;
+        border: 1.5px solid rgba(255, 255, 255, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #8a94a6;
+        transition: all 200ms ease;
+      }
+      .sync-core.active .core-orb {
+        background: #4f8cff;
+        color: #ffffff;
+        border-color: #ffffff;
+        box-shadow: 0 0 20px #4f8cff;
+      }
+      .core-title {
+        font-size: 8.5px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        color: #f5f7fa;
+      }
+      .desk-corner {
+        grid-column: 3;
+        font-size: 8.5px;
+        color: #7b869e;
+      }
+      .desk-surface {
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: #181d26;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .desk-corner.active .desk-surface {
+        border-color: #38ef7d;
+        color: #38ef7d;
+      }
+    custom_field_tap_action:
+      plan:
+        action: perform-action
+        perform_action: input_boolean.toggle
+        target:
+          entity_id: input_boolean.sync_light_colors
+
+title: Spatial
+views:
+  - title: Canvas
+    path: canvas
+    icon: mdi:floor-plan
+    theme: Spatial
+    type: sections
+    max_columns: 3
+    dense_section_placement: true
+    sections:
+      # ── Interactive Room Blueprint & Spatial Sync ────────────────
+      - type: grid
+        column_span: 3
+        cards:
+          - type: custom:button-card
+            template: spatial_room_blueprint
+            grid_options: { columns: full }
+
+          # Spatial Master Harmony Light Controller
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: rgba(18, 22, 31, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.09);
+                  border-radius: 20px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.living_room_lights
+                name: Spatial Harmony (All Fixtures)
+                icon: mdi:palette-swatch
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              
+              # Spatial Ambiance Moods (Clean 3x2 Matrix)
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "Golden 2.4K"
+                    icon: mdi:weather-sunset
+                    icon_color: amber
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 2400 }
+                  - type: template
+                    content: "Warm 2.7K"
+                    icon: mdi:sofa
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "Nordic 4.5K"
+                    icon: mdi:snowflake
+                    icon_color: blue
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 4500 }
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "Cinema"
+                    icon: mdi:movie
+                    icon_color: red
+                    tap_action:
+                      action: perform-action
+                      perform_action: script.turn_on
+                      target: { entity_id: script.movie_time }
+                  - type: template
+                    content: "Biolum"
+                    icon: mdi:shimmer
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [0, 230, 255] }
+                  - type: template
+                    content: "Midnight"
+                    icon: mdi:weather-night
+                    icon_color: purple
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [140, 50, 255] }
+
+      # ── Spatial Node — Lamp One ──────────────────────────────────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: rgba(18, 22, 31, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.09);
+                  border-radius: 20px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.light_1
+                name: West Node · Lamp One
+                icon: mdi:floor-lamp-outline
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2200K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2700K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4000K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6500K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 6500 }
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "Warm Gold"
+                    icon: mdi:circle
+                    icon_color: amber
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { rgb_color: [255, 175, 40] }
+                  - type: template
+                    content: "Pacific"
+                    icon: mdi:circle
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { rgb_color: [0, 210, 255] }
+                  - type: template
+                    content: "Wheel"
+                    icon: mdi:palette
+                    tap_action:
+                      action: more-info
+                      entity: light.light_1
+
+      # ── Spatial Node — Lamp Two ──────────────────────────────────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: rgba(18, 22, 31, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.09);
+                  border-radius: 20px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.light_2
+                name: East Node · Lamp Two
+                icon: mdi:floor-lamp-outline
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2200K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2700K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4000K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6500K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 6500 }
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "Warm Gold"
+                    icon: mdi:circle
+                    icon_color: amber
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { rgb_color: [255, 175, 40] }
+                  - type: template
+                    content: "Pacific"
+                    icon: mdi:circle
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { rgb_color: [0, 210, 255] }
+                  - type: template
+                    content: "Wheel"
+                    icon: mdi:palette
+                    tap_action:
+                      action: more-info
+                      entity: light.light_2
+
+      # ── Spatial Node — Perimeter Govee Strip ─────────────────────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: rgba(18, 22, 31, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.09);
+                  border-radius: 20px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.h619a
+                name: Perimeter · Govee Strip
+                icon: mdi:led-strip-variant
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2200K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2700K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4000K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6500K"
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 6500 }
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "Sunset"
+                    icon: mdi:circle
+                    icon_color: red
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { rgb_color: [255, 90, 80] }
+                  - type: template
+                    content: "Biolum"
+                    icon: mdi:circle
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { rgb_color: [0, 230, 255] }
+                  - type: template
+                    content: "Wheel"
+                    icon: mdi:palette
+                    tap_action:
+                      action: more-info
+                      entity: light.h619a
+
+      # ── AV Center Stage: TV & Ambilight ──────────────────────────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  background: rgba(18, 22, 31, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.09);
+                  border-radius: 20px;
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.tv_ambilight
+                name: Center Node · TV Ambilight
+                icon: mdi:television-ambient-light
+                show_brightness_control: true
+                show_color_control: true
+                use_light_color: true
+              - type: custom:mushroom-media-player-card
+                entity: media_player.tv
+                name: Philips 65″ Display
+                icon: mdi:television
+                show_volume_level: true
+                volume_controls:
+                  - volume_buttons
+                  - volume_set
+                media_controls:
+                  - on_off
+                  - play_pause_stop

@@ -1,0 +1,58 @@
+- id: device_health
+  alias: Device Health Monitor
+  description: Monitor watched devices and notify if unavailable.
+  triggers:
+    - trigger: state
+      entity_id:
+        - light.light_1
+        - light.light_2
+        - light.h619a
+        - media_player.tv
+        - media_player.tv_3
+        - switch.birou
+      to: unavailable
+      for: "00:15:00"
+    - trigger: state
+      entity_id:
+        - light.light_1
+        - light.light_2
+        - light.h619a
+        - media_player.tv
+        - media_player.tv_3
+        - switch.birou
+      from: unavailable
+      not_to:
+        - unavailable
+        - unknown
+  actions:
+    - variables:
+        device_names:
+          light.light_1: "Light 1"
+          light.light_2: "Light 2"
+          light.h619a: "Govee Strip"
+          media_player.tv: "Philips TV"
+          media_player.tv_3: "Android TV Remote"
+          switch.birou: "Desk Plug"
+        device_name: "{{ device_names.get(trigger.entity_id, trigger.entity_id) }}"
+        notification_id: "health_{{ trigger.entity_id.replace('.', '_') }}"
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.to_state.state == 'unavailable' }}"
+          sequence:
+            - action: persistent_notification.create
+              data:
+                notification_id: "{{ notification_id }}"
+                title: Device Unavailable
+                message: "{{ device_name }} is unavailable."
+            - action: notify.mobile_app_iphone
+              data:
+                title: Device Unavailable
+                message: "{{ device_name }} is unavailable."
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.to_state.state != 'unavailable' and trigger.from_state.state == 'unavailable' }}"
+          sequence:
+            - action: persistent_notification.dismiss
+              data:
+                notification_id: "{{ notification_id }}"

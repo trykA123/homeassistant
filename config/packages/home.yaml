@@ -1,0 +1,63 @@
+input_number:
+  electricity_price:
+    name: Electricity Price
+    min: 0
+    max: 5
+    step: 0.01
+    unit_of_measurement: RON/kWh
+    mode: box
+    icon: mdi:cash
+
+input_boolean:
+  sync_light_colors:
+    name: "Sync All Light Colors"
+    icon: mdi:palette-swatch-outline
+    initial: off
+
+template:
+  - sensor:
+      - name: "Desk Cost Today"
+        unique_id: desk_cost_today
+        device_class: monetary
+        unit_of_measurement: RON
+        state: "{{ (states('sensor.birou_today_s_consumption') | float(0) * states('input_number.electricity_price') | float(0)) | round(2) }}"
+
+      - name: "Desk Cost Month"
+        unique_id: desk_cost_month
+        device_class: monetary
+        unit_of_measurement: RON
+        state: "{{ (states('sensor.birou_this_month_s_consumption') | float(0) * states('input_number.electricity_price') | float(0)) | round(2) }}"
+
+      - name: "Home Greeting"
+        unique_id: home_greeting
+        state: >-
+          {% set h = now().hour %}
+          {% if h < 5 %}Good night{% elif h < 12 %}Good morning{% elif h < 18 %}Good afternoon{% elif h < 23 %}Good evening{% else %}Good night{% endif %}
+
+      - name: "Unavailable Devices"
+        unique_id: unavailable_devices
+        icon: mdi:lan-disconnect
+        state: >-
+          {{ ['light.light_1', 'light.light_2', 'light.h619a', 'media_player.tv', 'media_player.tv_3', 'switch.birou']
+             | select('is_state', 'unavailable') | list | count }}
+        attributes:
+          names: >-
+            {% set n = {'light.light_1': 'Lamp one', 'light.light_2': 'Lamp two', 'light.h619a': 'LED strip',
+                        'media_player.tv': 'TV', 'media_player.tv_3': 'TV remote', 'switch.birou': 'Desk plug'} %}
+            {% set ns = namespace(names=[]) %}
+            {% for k, v in n.items() if is_state(k, 'unavailable') %}{% set ns.names = ns.names + [v] %}{% endfor %}
+            {{ ns.names }}
+
+      - name: "Living Room Lights On"
+        unique_id: living_room_lights_on
+        icon: mdi:lightbulb-group
+        state: "{{ ['light.light_1', 'light.light_2', 'light.h619a'] | select('is_state', 'on') | list | count }}"
+
+light:
+  - platform: group
+    name: Living Room Lights
+    unique_id: living_room_lights
+    entities:
+      - light.light_1
+      - light.light_2
+      - light.h619a

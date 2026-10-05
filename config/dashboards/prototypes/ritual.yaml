@@ -1,0 +1,408 @@
+# Dashboard: "Ritual" — the home organised by the flow of your day.
+# Design read: cinematic, warm and quiet. Serif titles, amber ember light, a vertical timeline.
+# The current part of the day glows ("NOW"); every stage offers three one-tap moves for that moment.
+# Flow: hero with the next event -> Morning -> Day -> Evening -> Night -> lamps for fine control.
+# Mobile-first for iPhone (393px); two columns on wide screens.
+
+button_card_templates:
+  ritual_hero:
+    entity: sun.sun
+    show_icon: false
+    show_name: false
+    show_state: false
+    tap_action: { action: none }
+    triggers_update:
+      - sensor.sun_next_rising
+      - sensor.sun_next_setting
+      - sensor.living_room_lights_on
+      - sensor.birou_current_consumption
+      - media_player.tv
+      - weather.forecast_home
+      - sensor.home_greeting
+    custom_fields:
+      hero: >-
+        [[[
+          const now = new Date();
+          const greet = states['sensor.home_greeting']?.state ?? 'Hello';
+          const day = now.toLocaleDateString([], {weekday: 'long', day: 'numeric', month: 'long'});
+          const fmt = (d) => d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
+          const ev = [];
+          const set = new Date(states['sensor.sun_next_setting']?.state);
+          const rise = new Date(states['sensor.sun_next_rising']?.state);
+          if (!isNaN(set)) ev.push(['Sunset', set, 'weather-sunset-down']);
+          if (!isNaN(rise)) ev.push(['Sunrise', rise, 'weather-sunset-up']);
+          const wd = new Date(now); wd.setHours(23, 0, 0, 0); if (wd < now) wd.setDate(wd.getDate() + 1);
+          ev.push(['Wind down', wd, 'weather-night']);
+          ev.sort((a, b) => a[1] - b[1]);
+          const [nm, t, ic] = ev[0];
+          const mins = Math.max(0, Math.round((t - now) / 60000));
+          const cd = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+          const lit = Number(states['sensor.living_room_lights_on']?.state || 0);
+          const tv = states['media_player.tv']?.state;
+          const tvOn = tv && tv !== 'off' && tv !== 'unavailable';
+          const watt = Math.round(Number(states['sensor.birou_current_consumption']?.state) || 0);
+          const w = states['weather.forecast_home'];
+          const temp = w?.attributes?.temperature != null ? Math.round(w.attributes.temperature) + '°' : '--';
+          const pill = (on, icon, txt) => `<span class="pill ${on ? 'on' : ''}"><ha-icon icon="mdi:${icon}"></ha-icon>${txt}</span>`;
+          return `
+            <div class="hero">
+              <div class="eyebrow">${day}</div>
+              <h1>${greet}.</h1>
+              <div class="next"><ha-icon icon="mdi:${ic}"></ha-icon><span>${nm} in <b>${cd}</b></span><em>${fmt(t)}</em></div>
+              <div class="pills">
+                ${pill(lit > 0, 'lightbulb-on', lit ? lit + ' lit' : 'Lights off')}
+                ${pill(tvOn, 'television', tvOn ? 'TV on' : 'TV off')}
+                ${pill(watt > 5, 'flash', watt + ' W')}
+                ${pill(false, 'thermometer', temp)}
+              </div>
+            </div>`;
+        ]]]
+    styles:
+      card:
+        - padding: 0
+        - background: none
+        - border: none
+        - box-shadow: none
+        - overflow: visible
+      grid:
+        - grid-template-areas: '"hero"'
+      custom_fields:
+        hero:
+          - width: 100%
+    extra_styles: |
+      #hero { text-align: left; width: 100%; }
+      ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; display: inline-flex; flex: 0 0 auto; margin: 0; }
+      .hero { position: relative; overflow: hidden; padding: 22px 20px 18px; border-radius: 28px;
+        background: linear-gradient(165deg, rgba(255,170,70,.22), rgba(255,90,60,.06) 55%, rgba(255,236,210,.04));
+        border: 1px solid rgba(255,200,130,.18); box-shadow: inset 0 1px 0 rgba(255,230,190,.12); }
+      .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #c9a679; }
+      h1 { margin: 10px 0 14px; font-family: ui-serif, 'New York', Georgia, serif; font-size: 46px; line-height: 1; font-weight: 500; letter-spacing: -.02em; color: #fbf1e2; text-transform: none; }
+      .next { display: flex; justify-content: flex-start; text-align: left; align-items: center; gap: 9px; padding: 11px 14px; border-radius: 16px; background: rgba(13,10,9,.55); border: 1px solid rgba(255,200,130,.14); color: #f6ede0; font-size: 15px; font-weight: 500; }
+      .next ha-icon { color: #ffb454; }
+      .next > span { flex: 1; text-align: left; }
+      .next b { color: #ffb454; font-weight: 700; }
+      .next em { margin-left: auto; font-style: normal; font-weight: 700; font-size: 14px; color: #c9a679; font-variant-numeric: tabular-nums; }
+      .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+      .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #a3917a; background: rgba(255,236,210,.06); border: 1px solid rgba(255,220,170,.10); }
+      .pill.on { color: #1a1109; background: #ffb454; border-color: #ffb454; box-shadow: 0 0 18px -2px rgba(255,180,84,.6); }
+      .pill ha-icon { --mdc-icon-size: 15px; width: 15px; height: 15px; }
+
+  ritual_stage:
+    entity: sun.sun
+    show_icon: false
+    show_name: false
+    show_state: false
+    tap_action: { action: none }
+    custom_fields:
+      stg: >-
+        [[[
+          const h = new Date().getHours();
+          const s = variables.s, e = variables.e;
+          const act = s < e ? (h >= s && h < e) : (h >= s || h < e);
+          const pad = (n) => String(n).padStart(2, '0');
+          return `
+            <div class="stg ${act ? 'act' : ''}">
+              <div class="row">
+                <span class="ic"><ha-icon icon="mdi:${variables.icon}"></ha-icon></span>
+                <div class="tx"><div class="ttl">${variables.label}</div><div class="rng">${pad(s)}:00 – ${pad(e)}:00</div></div>
+                ${act ? '<span class="now">Now</span>' : ''}
+              </div>
+              <div class="bl">${variables.blurb}</div>
+            </div>`;
+        ]]]
+    styles:
+      card:
+        - padding: 0
+        - background: none
+        - border: none
+        - box-shadow: none
+        - overflow: visible
+      grid:
+        - grid-template-areas: '"stg"'
+      custom_fields:
+        stg:
+          - width: 100%
+    extra_styles: |
+      #stg { text-align: left; width: 100%; display: block; }
+      ha-icon { --mdc-icon-size: 22px; width: 22px; height: 22px; display: inline-flex; flex: 0 0 auto; margin: 0; }
+      .stg { position: relative; width: 100%; padding-top: 2px; opacity: .6; transition: opacity 300ms ease; text-align: left; }
+      .stg.act { opacity: 1; }
+      .ic { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid rgba(255,220,170,.18); background: rgba(255,236,210,.05); }
+      .stg.act .ic { background: #ffb454; border-color: #ffb454; color: #1a1109; box-shadow: 0 0 0 5px rgba(255,180,84,.16), 0 0 22px rgba(255,180,84,.7); }
+      .row { display: flex; justify-content: flex-start; align-items: center; gap: 12px; width: 100%; color: #a3917a; }
+      .tx { flex: 1; text-align: left; }
+      .stg.act .row { color: #ffb454; }
+      .ttl { font-family: ui-serif, 'New York', Georgia, serif; font-size: 26px; line-height: 1.05; font-weight: 500; color: #f6ede0; letter-spacing: -.01em; }
+      .rng { font-size: 12px; font-weight: 600; letter-spacing: .08em; color: #a3917a; font-variant-numeric: tabular-nums; margin-top: 2px; }
+      .now { margin-left: auto; padding: 4px 10px; border-radius: 999px; background: #ffb454; color: #1a1109; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+      .bl { margin-top: 6px; font-size: 14px; color: #a3917a; font-weight: 500; }
+
+  ritual_act:
+    show_icon: true
+    show_name: true
+    show_state: false
+    styles:
+      card:
+        - height: 78px
+        - padding: 10px 6px
+        - border-radius: 18px
+        - background: rgba(255,236,210,.06)
+        - border: 1px solid rgba(255,220,170,.12)
+        - box-shadow: none
+      grid:
+        - grid-template-areas: '"i" "n"'
+        - grid-template-rows: 1fr auto
+      icon:
+        - width: 24px
+        - color: "#ffb454"
+      name:
+        - font-size: 13px
+        - font-weight: 700
+        - color: "#f6ede0"
+        - letter-spacing: -.01em
+    extra_styles: |
+      ha-card { transition: transform 130ms ease, background 200ms ease; }
+      ha-card:active { transform: scale(.94); background: rgba(255,180,84,.18) !important; }
+
+  ritual_heading:
+    show_icon: false
+    show_state: false
+    tap_action: { action: none }
+    styles:
+      card:
+        - background: none
+        - border: none
+        - box-shadow: none
+        - padding: 14px 6px 0
+      name:
+        - justify-self: start
+        - font-size: 12px
+        - font-weight: 700
+        - letter-spacing: .18em
+        - text-transform: uppercase
+        - color: "#a3917a"
+
+title: Ritual
+views:
+  - title: Day
+    path: day
+    icon: mdi:timeline-clock
+    theme: Ritual
+    type: sections
+    max_columns: 2
+    sections:
+      # ── Hero + the day timeline ─────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:button-card
+            template: ritual_hero
+            grid_options: { columns: full }
+
+          # Morning
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                ha-card { background: none; border: none; box-shadow: none; overflow: visible; }
+                #root { gap: 10px !important; border-left: 2px solid rgba(255,180,84,.22); margin: 14px 0 0 14px; padding: 0 0 8px 20px; }
+            cards:
+              - type: custom:button-card
+                template: ritual_stage
+                variables: { label: Morning, icon: weather-sunset-up, s: 5, e: 11, blurb: "A soft start. Wake the room gently." }
+              - type: grid
+                columns: 3
+                square: false
+                cards:
+                  - type: custom:button-card
+                    template: ritual_act
+                    name: Wake
+                    icon: mdi:white-balance-sunny
+                    tap_action: { action: perform-action, perform_action: light.turn_on, target: { entity_id: light.living_room_lights }, data: { color_temp_kelvin: 2700, brightness_pct: 35 }, haptic: light }
+                  - type: custom:button-card
+                    template: ritual_act
+                    name: Bright
+                    icon: mdi:brightness-7
+                    tap_action: { action: perform-action, perform_action: light.turn_on, target: { entity_id: light.living_room_lights }, data: { color_temp_kelvin: 4500, brightness_pct: 100 }, haptic: light }
+                  - type: custom:button-card
+                    template: ritual_act
+                    name: Lights off
+                    icon: mdi:lightbulb-off-outline
+                    tap_action: { action: perform-action, perform_action: light.turn_off, target: { entity_id: light.living_room_lights }, haptic: light }
+
+          # Day
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                ha-card { background: none; border: none; box-shadow: none; overflow: visible; }
+                #root { gap: 10px !important; border-left: 2px solid rgba(255,180,84,.22); margin: 6px 0 0 14px; padding: 0 0 8px 20px; }
+            cards:
+              - type: custom:button-card
+                template: ritual_stage
+                variables: { label: Day, icon: white-balance-sunny, s: 11, e: 17, blurb: "Clear, neutral light for focus." }
+              - type: grid
+                columns: 3
+                square: false
+                cards:
+                  - type: custom:button-card
+                    template: ritual_act
+                    name: Focus
+                    icon: mdi:target
+                    tap_action: { action: perform-action, perform_action: light.turn_on, target: { entity_id: light.living_room_lights }, data: { color_temp_kelvin: 5000, brightness_pct: 100 }, haptic: light }
+                  - type: custom:button-card
+                    template: ritual_act
+                    name: Daylight
+                    icon: mdi:weather-sunny
+                    tap_action: { action: perform-action, perform_action: light.turn_on, target: { entity_id: light.living_room_lights }, data: { color_temp_kelvin: 6500, brightness_pct: 80 }, haptic: light }
+                  - type: custom:button-card
+                    template: ritual_act
+                    name: Lights off
+                    icon: mdi:lightbulb-off-outline
+                    tap_action: { action: perform-action, perform_action: light.turn_off, target: { entity_id: light.living_room_lights }, haptic: light }
+
+          # Evening
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                ha-card { background: none; border: none; box-shadow: none; overflow: visible; }
+                #root { gap: 10px !important; border-left: 2px solid rgba(255,180,84,.22); margin: 6px 0 0 14px; padding: 0 0 8px 20px; }
+            cards:
+              - type: custom:button-card
+                template: ritual_stage
+                variables: { label: Evening, icon: weather-sunset-down, s: 17, e: 22, blurb: "Golden hour. Warm, low and slow." }
+              - type: grid
+                columns: 3
+                square: false
+                cards:
+                  - type: custom:button-card
+                    template: ritual_act
+                    entity: scene.evening
+                    name: Evening
+                    icon: mdi:weather-sunset
+                    tap_action: { action: perform-action, perform_action: scene.turn_on, target: { entity_id: scene.evening }, haptic: success }
+                  - type: custom:button-card
+                    template: ritual_act
+                    entity: scene.relax
+                    name: Relax
+                    icon: mdi:sofa
+                    tap_action: { action: perform-action, perform_action: scene.turn_on, target: { entity_id: scene.relax }, haptic: success }
+                  - type: custom:button-card
+                    template: ritual_act
+                    entity: script.movie_time
+                    name: Movie
+                    icon: mdi:movie-open
+                    tap_action: { action: perform-action, perform_action: script.turn_on, target: { entity_id: script.movie_time }, haptic: success }
+
+          # Night
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                ha-card { background: none; border: none; box-shadow: none; overflow: visible; }
+                #root { gap: 10px !important; border-left: 2px solid rgba(255,180,84,.08); margin: 6px 0 0 14px; padding: 0 0 4px 20px; }
+            cards:
+              - type: custom:button-card
+                template: ritual_stage
+                variables: { label: Night, icon: weather-night, s: 22, e: 5, blurb: "Dim and quiet. Wind down runs at 23:00." }
+              - type: grid
+                columns: 3
+                square: false
+                cards:
+                  - type: custom:button-card
+                    template: ritual_act
+                    entity: scene.night
+                    name: Night
+                    icon: mdi:weather-night
+                    tap_action: { action: perform-action, perform_action: scene.turn_on, target: { entity_id: scene.night }, haptic: success }
+                  - type: custom:button-card
+                    template: ritual_act
+                    name: Candle
+                    icon: mdi:candle
+                    tap_action: { action: perform-action, perform_action: light.turn_on, target: { entity_id: light.living_room_lights }, data: { color_temp_kelvin: 2200, brightness_pct: 8 }, haptic: light }
+                  - type: custom:button-card
+                    template: ritual_act
+                    entity: script.all_off
+                    name: All off
+                    icon: mdi:power
+                    tap_action: { action: perform-action, perform_action: script.turn_on, target: { entity_id: script.all_off }, haptic: success }
+
+      # ── Fine control ────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:button-card
+            template: ritual_heading
+            name: Lamps · fine control
+            grid_options: { columns: full }
+          - type: custom:mushroom-light-card
+            entity: light.living_room_lights
+            name: All lights
+            icon: mdi:lightbulb-group
+            show_brightness_control: true
+            show_color_temp_control: true
+            show_color_control: true
+            use_light_color: true
+            collapsible_controls: false
+            grid_options: { columns: full }
+          - type: custom:mushroom-light-card
+            entity: light.light_1
+            name: Lamp 1
+            icon: mdi:floor-lamp
+            show_brightness_control: true
+            show_color_temp_control: true
+            show_color_control: true
+            use_light_color: true
+            grid_options: { columns: full }
+          - type: custom:mushroom-light-card
+            entity: light.light_2
+            name: Lamp 2
+            icon: mdi:floor-lamp
+            show_brightness_control: true
+            show_color_temp_control: true
+            show_color_control: true
+            use_light_color: true
+            grid_options: { columns: full }
+          - type: custom:mushroom-light-card
+            entity: light.h619a
+            name: LED strip
+            icon: mdi:led-strip-variant
+            show_brightness_control: true
+            show_color_temp_control: true
+            show_color_control: true
+            use_light_color: true
+            grid_options: { columns: full }
+          - type: custom:button-card
+            entity: input_boolean.sync_light_colors
+            tap_action: { action: toggle, haptic: medium }
+            show_icon: false
+            show_name: false
+            show_state: false
+            grid_options: { columns: full }
+            custom_fields:
+              c: >-
+                [[[
+                  const on = entity.state === 'on';
+                  return `<ha-icon icon="mdi:palette-swatch"></ha-icon><div class="tx"><b>Colour sync</b><span>${on ? 'All lamps share one colour' : 'Lamps are independent'}</span></div><div class="sw ${on ? 'on' : ''}"><i></i></div>`;
+                ]]]
+            styles:
+              card:
+                - padding: 14px 16px
+                - border-radius: 20px
+                - background: rgba(255,236,210,.05)
+                - border: 1px solid rgba(255,220,170,.10)
+                - box-shadow: none
+              grid:
+                - grid-template-areas: '"c"'
+              custom_fields:
+                c:
+                  - width: 100%
+            extra_styles: |
+              ha-icon { --mdc-icon-size: 22px; width: 22px; height: 22px; color: #ffb454; display: inline-flex; flex: 0 0 auto; }
+              #c { display: flex; align-items: center; gap: 12px; text-align: left; }
+              .tx { display: flex; flex-direction: column; flex: 1; }
+              .tx b { font-size: 15px; font-weight: 700; color: #f6ede0; }
+              .tx span { font-size: 12px; color: #a3917a; }
+              .sw { width: 46px; height: 28px; border-radius: 999px; background: rgba(255,236,210,.12); position: relative; transition: background 200ms ease; }
+              .sw i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #f6ede0; transition: transform 200ms ease; }
+              .sw.on { background: #ffb454; }
+              .sw.on i { transform: translateX(18px); background: #1a1109; }

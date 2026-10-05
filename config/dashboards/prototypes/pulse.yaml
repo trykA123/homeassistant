@@ -1,0 +1,454 @@
+# Prototype 3 — "Pulse": admin instrument panel (desktop, ~1440x900+).
+# Design read: the home admin at a desk wants to see energy, device health and
+# recent activity at once; instrument-panel dark, mono numerals, hairline frames.
+# Dials: variance 5 / motion 2 / density 8.
+# Colour code: amber = energy, teal = healthy, red = fault. Nothing else is coloured.
+# The desk plug is monitored only. There is no power control on this board.
+# Source of truth for the storage dashboard /proto-pulse (pushed by scripts/push-dashboards.mjs).
+
+button_card_templates:
+  pulse_head:
+    show_icon: false
+    show_state: false
+    show_name: true
+    show_label: true
+    tap_action: { action: none }
+    styles:
+      card: [padding: 0 2px, background: none, border: none, box-shadow: none, height: 28px]
+      grid:
+        - grid-template-areas: '"n l"'
+        - grid-template-columns: 1fr auto
+        - align-items: center
+      name:
+        - justify-self: start
+        - font-family: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
+        - font-size: 11px
+        - letter-spacing: .16em
+        - text-transform: uppercase
+        - color: var(--secondary-text-color)
+      label:
+        - font-family: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
+        - font-size: 11px
+        - color: var(--secondary-text-color)
+
+  pulse_readout:
+    show_icon: false
+    show_name: true
+    show_state: false
+    show_label: false
+    tap_action: { action: more-info }
+    custom_fields:
+      v: >-
+        [[[
+          const v = Number(entity.state);
+          const d = variables.decimals ?? 1;
+          const txt = isNaN(v) ? '—' : v.toFixed(d);
+          return `<span class="n">${txt}</span><span class="u">${variables.unit ?? entity.attributes.unit_of_measurement ?? ''}</span>`;
+        ]]]
+    styles:
+      card: [padding: 8px 14px]
+      grid:
+        - grid-template-areas: '"n" "v"'
+        - row-gap: 2px
+      name:
+        - justify-self: start
+        - font-family: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
+        - font-size: 10.5px
+        - letter-spacing: .12em
+        - text-transform: uppercase
+        - color: var(--secondary-text-color)
+      custom_fields:
+        v: [justify-self: start]
+    extra_styles: |
+      .n { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 19px; font-variant-numeric: tabular-nums; color: var(--primary-text-color); }
+      .u { margin-left: 4px; font-size: 12px; color: var(--secondary-text-color); }
+
+title: Pulse
+views:
+  - title: Overview
+    path: overview
+    icon: mdi:pulse
+    theme: Pulse
+    type: sections
+    max_columns: 4
+    dense_section_placement: true
+    sections:
+      # ── Top strip: one-line system summary across the full width ───
+      - type: grid
+        column_span: 4
+        cards:
+          - type: custom:button-card
+            entity: sensor.unavailable_devices
+            show_icon: false
+            show_name: false
+            show_state: false
+            tap_action: { action: more-info }
+            grid_options: { columns: full }
+            triggers_update:
+              - sensor.birou_current_consumption
+              - sensor.living_room_lights_on
+              - media_player.tv
+              - person.claud
+              - sensor.backup_backup_manager_state
+              - binary_sensor.birou_overloaded
+            custom_fields:
+              strip: >-
+                [[[
+                  const off = Number(entity.state) || 0;
+                  const names = (entity.attributes.names || []).join(', ');
+                  const over = states['binary_sensor.birou_overloaded']?.state === 'on';
+                  const ok = off === 0 && !over;
+                  const w = Math.round(Number(states['sensor.birou_current_consumption']?.state) || 0);
+                  const lit = Number(states['sensor.living_room_lights_on']?.state) || 0;
+                  const tv = states['media_player.tv']?.state;
+                  const who = states['person.claud']?.state === 'home' ? 'HOME' : 'AWAY';
+                  const bk = states['sensor.backup_last_successful_automatic_backup']?.state;
+                  const bkTxt = bk && !['unknown','unavailable'].includes(bk) ? new Date(bk).toLocaleDateString('en-GB') : 'NEVER';
+                  const cell = (k, v, cls = '') => `<div class="cell ${cls}"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+                  return `<div class="row">
+                    ${cell('STATUS', ok ? '● NOMINAL' : `● ${over ? 'DESK OVERLOAD' : off + ' OFFLINE'}`, ok ? 'ok' : 'bad')}
+                    ${cell('LOAD', w + ' W', 'amb')}
+                    ${cell('LAMPS', lit + ' / 3')}
+                    ${cell('TV', (tv || '—').toUpperCase())}
+                    ${cell('PRESENCE', who)}
+                    ${cell('LAST BACKUP', bkTxt, bkTxt === 'NEVER' ? 'bad' : '')}
+                    ${!ok && names ? cell('OFFLINE', names.toUpperCase(), 'bad') : ''}
+                  </div>`;
+                ]]]
+            styles:
+              card: [padding: 0]
+              grid:
+                - grid-template-areas: '"strip"'
+              custom_fields:
+                strip: [justify-self: stretch]
+            extra_styles: |
+              .row { display: flex; flex-wrap: wrap; }
+              .cell { display: flex; flex-direction: column; gap: 4px; padding: 12px 18px; border-right: 1px solid var(--divider-color); text-align: left; }
+              .k { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 10px; letter-spacing: .14em; color: var(--secondary-text-color); }
+              .v { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 14px; color: var(--primary-text-color); }
+              .ok .v { color: #5fd3b5; } .bad .v { color: #ff6b5e; } .amb .v { color: #f2b84b; }
+
+      # ── Energy (2 columns wide) ────────────────────────────────────
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:button-card
+            template: pulse_head
+            name: Desk energy · monitor only
+            label: switch.birou
+            grid_options: { columns: full }
+          - type: custom:button-card
+            entity: sensor.birou_current_consumption
+            show_icon: false
+            show_name: false
+            show_state: false
+            tap_action: { action: more-info }
+            grid_options: { columns: 12, rows: 2 }
+            custom_fields:
+              big: >-
+                [[[
+                  const w = Number(entity.state) || 0;
+                  return `<div class="k">LIVE LOAD</div><div class="n">${w.toFixed(1)}<span>W</span></div>`;
+                ]]]
+            styles:
+              card: [padding: 14px 16px]
+              grid: [grid-template-areas: '"big"']
+              custom_fields:
+                big: [justify-self: start, align-self: start, text-align: left]
+            extra_styles: |
+              .k { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 10.5px; letter-spacing: .12em; color: var(--secondary-text-color); }
+              .n { margin-top: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 48px; line-height: 1; color: #f2b84b; font-variant-numeric: tabular-nums; }
+              .n span { margin-left: 6px; font-size: 16px; color: var(--secondary-text-color); }
+          - type: custom:button-card
+            template: pulse_readout
+            entity: sensor.birou_voltage
+            name: Voltage
+            variables: { decimals: 1 }
+            grid_options: { columns: 6, rows: 1 }
+          - type: custom:button-card
+            template: pulse_readout
+            entity: sensor.birou_current
+            name: Current
+            variables: { decimals: 2 }
+            grid_options: { columns: 6, rows: 1 }
+          - type: custom:button-card
+            template: pulse_readout
+            entity: sensor.birou_today_s_consumption
+            name: Today
+            variables: { decimals: 2 }
+            grid_options: { columns: 6, rows: 1 }
+          - type: custom:button-card
+            template: pulse_readout
+            entity: sensor.birou_this_month_s_consumption
+            name: Month
+            variables: { decimals: 2 }
+            grid_options: { columns: 6, rows: 1 }
+          - type: custom:mini-graph-card
+            name: Load · 24 h
+            entities:
+              - entity: sensor.birou_current_consumption
+                color: "#f2b84b"
+            hours_to_show: 24
+            points_per_hour: 4
+            line_width: 1.5
+            height: 110
+            smoothing: false
+            show:
+              icon: false
+              state: false
+              legend: false
+              labels: true
+              extrema: true
+              fill: fade
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                ha-card { padding: 10px 6px 4px !important; }
+                .name { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace !important; font-size: 10.5px !important; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
+          - type: statistics-graph
+            title: kWh per day · 14 d
+            entities:
+              - entity: sensor.birou_today_s_consumption
+                name: Desk
+            chart_type: bar
+            period: day
+            days_to_show: 14
+            stat_types: [change]
+            hide_legend: true
+            grid_options: { columns: full }
+
+      # ── Cost (1 column) ────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:button-card
+            template: pulse_head
+            name: Cost
+            label: RON
+            grid_options: { columns: full }
+          - type: custom:button-card
+            entity: sensor.desk_cost_month
+            show_icon: false
+            show_name: false
+            show_state: false
+            tap_action: { action: more-info }
+            grid_options: { columns: full }
+            triggers_update:
+              - sensor.desk_cost_today
+              - input_number.electricity_price
+            custom_fields:
+              body: >-
+                [[[
+                  const today = Number(states['sensor.desk_cost_today']?.state) || 0;
+                  const month = Number(entity.state) || 0;
+                  const now = new Date();
+                  const day = now.getDate();
+                  const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                  const proj = day > 0 ? month / day * dim : 0;
+                  const price = states['input_number.electricity_price']?.state;
+                  const row = (k, v, cls = '') => `<div class="r ${cls}"><span>${k}</span><span>${v}</span></div>`;
+                  return row('TODAY', today.toFixed(2))
+                    + row('MONTH TO DATE', month.toFixed(2))
+                    + row('PROJECTED · ' + dim + ' D', proj.toFixed(2), 'amb')
+                    + row('TARIFF / kWh', price);
+                ]]]
+            styles:
+              card: [padding: 6px 16px]
+              grid: [grid-template-areas: '"body"']
+              custom_fields:
+                body: [justify-self: stretch]
+            extra_styles: |
+              .r { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--divider-color);
+                   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; }
+              .r:last-child { border-bottom: none; }
+              .r span:first-child { font-size: 10.5px; letter-spacing: .12em; color: var(--secondary-text-color); }
+              .r span:last-child { font-variant-numeric: tabular-nums; }
+              .amb span:last-child { color: #f2b84b; }
+          - type: tile
+            entity: input_number.electricity_price
+            name: Tariff
+            icon: mdi:cash
+            features_position: inline
+            features:
+              - type: numeric-input
+                style: buttons
+            grid_options: { columns: full }
+
+      # ── Sun timeline (1 column) ───────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:button-card
+            template: pulse_head
+            name: Daylight
+            label: "[[[ return states['weather.forecast_home'] ? Math.round(states['weather.forecast_home'].attributes.temperature) + ' °C · ' + states['weather.forecast_home'].state : '' ]]]"
+            triggers_update: [weather.forecast_home]
+            grid_options: { columns: full }
+          - type: custom:button-card
+            entity: sun.sun
+            show_icon: false
+            show_name: false
+            show_state: false
+            tap_action: { action: more-info }
+            grid_options: { columns: full }
+            triggers_update:
+              - sensor.sun_next_dawn
+              - sensor.sun_next_rising
+              - sensor.sun_next_setting
+              - sensor.sun_next_dusk
+            custom_fields:
+              tl: >-
+                [[[
+                  // Map each "next" event to today's clock time, then place it on a 24 h bar.
+                  const tod = (id) => { const s = states[id]?.state; if (!s) return null; const d = new Date(s); return d.getHours() + d.getMinutes() / 60; };
+                  const dawn = tod('sensor.sun_next_dawn'), rise = tod('sensor.sun_next_rising');
+                  const set = tod('sensor.sun_next_setting'), dusk = tod('sensor.sun_next_dusk');
+                  const now = new Date(); const n = now.getHours() + now.getMinutes() / 60;
+                  const pct = (h) => (h / 24 * 100).toFixed(2) + '%';
+                  const hm = (h) => h == null ? '—' : String(Math.floor(h)).padStart(2,'0') + ':' + String(Math.round(h % 1 * 60) % 60).padStart(2,'0');
+                  const len = set != null && rise != null ? set - rise : 0;
+                  return `<div class="bar">
+                      <div class="twi" style="left:${pct(dawn)};width:calc(${pct(dusk)} - ${pct(dawn)})"></div>
+                      <div class="day" style="left:${pct(rise)};width:calc(${pct(set)} - ${pct(rise)})"></div>
+                      <div class="now" style="left:${pct(n)}"></div>
+                    </div>
+                    <div class="ticks"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+                    <div class="grid">
+                      <div><span>DAWN</span>${hm(dawn)}</div><div><span>RISE</span>${hm(rise)}</div>
+                      <div><span>SET</span>${hm(set)}</div><div><span>DUSK</span>${hm(dusk)}</div>
+                    </div>
+                    <div class="len">DAYLIGHT ${Math.floor(len)} h ${Math.round(len % 1 * 60)} m</div>`;
+                ]]]
+            styles:
+              card: [padding: 16px]
+              grid: [grid-template-areas: '"tl"']
+              custom_fields:
+                tl: [justify-self: stretch, text-align: left]
+            extra_styles: |
+              .bar { position: relative; height: 26px; border-radius: 3px; background: #0b0d0c; overflow: hidden; border: 1px solid var(--divider-color); }
+              .twi { position: absolute; top: 0; bottom: 0; background: rgba(124,183,255,.18); }
+              .day { position: absolute; top: 0; bottom: 0; background: rgba(242,184,75,.32); }
+              .now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #d9ded9; }
+              .ticks { display: flex; justify-content: space-between; margin-top: 4px; font-family: ui-monospace, Menlo, monospace; font-size: 9.5px; color: var(--secondary-text-color); }
+              .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 14px; font-family: ui-monospace, Menlo, monospace; font-size: 14px; }
+              .grid span { display: block; font-size: 9.5px; letter-spacing: .12em; color: var(--secondary-text-color); margin-bottom: 2px; }
+              .len { margin-top: 12px; font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; letter-spacing: .12em; color: var(--secondary-text-color); }
+
+      # ── Device health table (2 columns wide) ───────────────────────
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:button-card
+            template: pulse_head
+            name: Device health
+            label: signal · cloud · thermal
+            grid_options: { columns: full }
+          - type: custom:button-card
+            entity: sensor.unavailable_devices
+            show_icon: false
+            show_name: false
+            show_state: false
+            tap_action: { action: none }
+            grid_options: { columns: full }
+            triggers_update:
+              - light.light_1
+              - light.light_2
+              - light.h619a
+              - switch.birou
+              - media_player.tv
+              - media_player.tv_3
+              - device_tracker.iphone
+              - sensor.light_1_signal_level
+              - sensor.light_2_signal_level
+              - sensor.birou_signal_level
+              - binary_sensor.light_1_cloud_connection
+              - binary_sensor.light_2_cloud_connection
+              - binary_sensor.birou_cloud_connection
+              - binary_sensor.light_1_overheated
+              - binary_sensor.light_2_overheated
+              - binary_sensor.birou_overloaded
+            custom_fields:
+              table: >-
+                [[[
+                  const devs = [
+                    ['Lamp one',  'light.light_1',     'sensor.light_1_signal_level', 'binary_sensor.light_1_cloud_connection', 'binary_sensor.light_1_overheated'],
+                    ['Lamp two',  'light.light_2',     'sensor.light_2_signal_level', 'binary_sensor.light_2_cloud_connection', 'binary_sensor.light_2_overheated'],
+                    ['Desk plug', 'switch.birou',      'sensor.birou_signal_level',   'binary_sensor.birou_cloud_connection',   'binary_sensor.birou_overloaded'],
+                    ['LED strip', 'light.h619a',       null, null, null],
+                    ['TV',        'media_player.tv',   null, null, null],
+                    ['TV remote', 'media_player.tv_3', null, null, null],
+                    ['iPhone',    'device_tracker.iphone', null, null, null],
+                  ];
+                  const st = (id) => id ? states[id]?.state : undefined;
+                  const bars = (id) => {
+                    const v = Number(st(id)); if (!id || isNaN(v)) return '<span class="dim">—</span>';
+                    return '<span class="sig">' + [1,2,3,4].map(i => `<i class="${i <= v ? 'on' : ''}" style="height:${3 + i * 3}px"></i>`).join('') + '</span>';
+                  };
+                  const flag = (id, good) => { const s = st(id); if (!id || s == null) return '<span class="dim">—</span>';
+                    const ok = good ? s === 'on' : s === 'off'; return `<span class="${ok ? 'ok' : 'bad'}">${ok ? 'OK' : (good ? 'LOST' : 'HOT')}</span>`; };
+                  const ago = (id) => { const s = states[id]; if (!s) return '—'; const m = Math.round((Date.now() - Date.parse(s.last_changed)) / 60000);
+                    return m < 60 ? m + 'm' : m < 1440 ? Math.round(m / 60) + 'h' : Math.round(m / 1440) + 'd'; };
+                  const rows = devs.map(([n, e, sig, cloud, heat]) => {
+                    const s = st(e); const down = s === 'unavailable' || s === undefined;
+                    return `<tr class="${down ? 'down' : ''}"><td><b class="${down ? 'bad' : 'ok'}">●</b> ${n}</td>
+                      <td class="mono">${(s ?? 'missing').replace('_', ' ')}</td><td>${bars(sig)}</td>
+                      <td>${flag(cloud, true)}</td><td>${flag(heat, false)}</td><td class="mono dim">${ago(e)}</td></tr>`;
+                  }).join('');
+                  return `<table><thead><tr><th>DEVICE</th><th>STATE</th><th>SIGNAL</th><th>CLOUD</th><th>THERMAL</th><th>SINCE</th></tr></thead><tbody>${rows}</tbody></table>`;
+                ]]]
+            styles:
+              card: [padding: 4px 16px 8px]
+              grid: [grid-template-areas: '"table"']
+              custom_fields:
+                table: [justify-self: stretch]
+            extra_styles: |
+              table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+              th { padding: 10px 6px; font-family: ui-monospace, Menlo, monospace; font-size: 9.5px; letter-spacing: .14em; font-weight: 400; color: var(--secondary-text-color); border-bottom: 1px solid var(--divider-color); }
+              td { padding: 9px 6px; border-bottom: 1px solid var(--divider-color); }
+              tr:last-child td { border-bottom: none; }
+              tr.down td { background: rgba(255,107,94,.05); }
+              .mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+              .dim { color: var(--secondary-text-color); }
+              .ok { color: #5fd3b5; font-weight: 400; } .bad { color: #ff6b5e; font-weight: 400; }
+              td span.ok, td span.bad { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+              .sig { display: inline-flex; align-items: flex-end; gap: 2px; height: 15px; }
+              .sig i { width: 4px; background: #2a302d; border-radius: 1px; }
+              .sig i.on { background: #5fd3b5; }
+
+      # ── Activity: timeline + log (2 columns wide) ──────────────────
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:button-card
+            template: pulse_head
+            name: Activity · 24 h
+            label: lights · tv
+            grid_options: { columns: full }
+          - type: history-graph
+            hours_to_show: 24
+            entities:
+              - entity: light.light_1
+                name: Lamp one
+              - entity: light.light_2
+                name: Lamp two
+              - entity: light.h619a
+                name: LED strip
+              - entity: light.tv_ambilight
+                name: Ambilight
+              - entity: media_player.tv
+                name: TV
+            grid_options: { columns: full }
+          - type: logbook
+            hours_to_show: 24
+            target:
+              entity_id:
+                - light.light_1
+                - light.light_2
+                - light.h619a
+                - light.tv_ambilight
+                - media_player.tv
+                - scene.evening
+                - scene.relax
+                - scene.night
+                - script.movie_time
+                - script.all_off
+                - person.claud
+            grid_options: { columns: full }

@@ -1,0 +1,114 @@
+input_datetime:
+  clea_ning_last_clean:
+    name: Clea Ning last clean
+    icon: mdi:robot-vacuum
+    has_date: true
+    has_time: true
+
+automation:
+  - id: clea_ning_remember_last_clean
+    alias: "Clea Ning · remember last clean"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: vacuum.clea_ning
+        to: cleaning
+    actions:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.clea_ning_last_clean
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+  - id: clea_ning_clean_when_away
+    alias: "Clea Ning · clean when I leave"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: person.claud
+        from: home
+        to: not_home
+        for:
+          minutes: 10
+    conditions:
+      - condition: state
+        entity_id: vacuum.clea_ning
+        state: docked
+      - condition: time
+        after: "08:00:00"
+        before: "20:00:00"
+      - condition: numeric_state
+        entity_id: sensor.clea_ning_battery
+        above: 49
+      - condition: template
+        value_template: >-
+          {{ states('input_datetime.clea_ning_last_clean')[:10] != now().strftime('%Y-%m-%d') }}
+    actions:
+      - action: vacuum.start
+        target:
+          entity_id: vacuum.clea_ning
+      - action: script.notify_home
+        data:
+          title: Clea Ning
+          message: Started cleaning while you are out.
+
+  - id: clea_ning_finished
+    alias: "Clea Ning · tell me when done"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: vacuum.clea_ning
+        from:
+          - cleaning
+          - returning
+        to: docked
+        for:
+          minutes: 1
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ as_timestamp(now()) - as_timestamp(states('input_datetime.clea_ning_last_clean'), 0) < 4 * 3600 }}
+    actions:
+      - action: script.notify_home
+        data:
+          title: Clea Ning finished
+          message: >-
+            Cleaned {{ states('sensor.clea_ning_area') }} m² in {{ states('sensor.clea_ning_time') }} min.
+            Battery {{ states('sensor.clea_ning_battery') }}%.
+
+  - id: clea_ning_needs_help
+    alias: "Clea Ning · needs help"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: vacuum.clea_ning
+        to: error
+        for:
+          seconds: 30
+    actions:
+      - action: script.notify_home
+        data:
+          title: Clea Ning needs help
+          message: >-
+            It stopped with an error (fault code {{ states('sensor.clea_ning_fault') }}). Check it in the Mi Home app.
+
+  - id: clea_ning_consumables
+    alias: "Clea Ning · parts to replace"
+    mode: single
+    triggers:
+      - trigger: time
+        at: "18:00:00"
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ [states('sensor.clea_ning_filter_life'), states('sensor.clea_ning_mop_life'),
+              states('sensor.xiaomi_de_1154889021_c102gl_brush_life_level_p_9_2')]
+             | map('float', 100) | min < 10 }}
+    actions:
+      - action: script.notify_home
+        data:
+          title: Clea Ning parts
+          message: >-
+            Filter {{ states('sensor.clea_ning_filter_life') }}%,
+            brush {{ states('sensor.xiaomi_de_1154889021_c102gl_brush_life_level_p_9_2') }}%,
+            mop {{ states('sensor.clea_ning_mop_life') }}%. Something is below 10%.

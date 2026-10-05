@@ -1,0 +1,1717 @@
+{
+ "title": "Home",
+ "views": [
+  {
+   "title": "Home",
+   "path": "home",
+   "type": "sections",
+   "max_columns": 4,
+   "dense_section_placement": true,
+   "theme": "Harbour",
+   "badges": [
+    {
+     "type": "entity",
+     "entity": "person.claud",
+     "show_name": false,
+     "show_state": true
+    },
+    {
+     "type": "entity",
+     "entity": "sensor.unavailable_devices",
+     "name": "Offline",
+     "show_name": true,
+     "visibility": [
+      {
+       "condition": "numeric_state",
+       "entity": "sensor.unavailable_devices",
+       "above": 0
+      }
+     ]
+    },
+    {
+     "type": "entity",
+     "entity": "binary_sensor.birou_overloaded",
+     "name": "Desk overloaded",
+     "show_name": true,
+     "visibility": [
+      {
+       "condition": "state",
+       "entity": "binary_sensor.birou_overloaded",
+       "state": "on"
+      }
+     ]
+    },
+    {
+     "type": "entity",
+     "entity": "vacuum.clea_ning",
+     "show_name": true,
+     "visibility": [
+      {
+       "condition": "state",
+       "entity": "vacuum.clea_ning",
+       "state_not": "docked"
+      }
+     ]
+    }
+   ],
+   "sections": [
+    {
+     "type": "grid",
+     "column_span": 3,
+     "cards": [
+      {
+       "type": "markdown",
+       "grid_options": {
+        "columns": 12,
+        "rows": 2
+       },
+       "text_only": true,
+       "content": "{% set h = now().hour %} # {{ 'Good morning' if h < 12 else 'Good afternoon' if h < 18 else 'Good evening' }}\n{{ now().strftime('%A %-d %B') }} · {{ states('sensor.living_room_lights_on') }} lights on · desk {{ states('sensor.birou_current_consumption') | round(0) }} W · vacuum {{ states('vacuum.clea_ning') }}"
+      },
+      {
+       "type": "tile",
+       "entity": "scene.evening",
+       "name": "Evening",
+       "icon": "mdi:weather-sunset",
+       "hide_state": true,
+       "grid_options": {
+        "columns": 3
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "scene.turn_on",
+        "target": {
+         "entity_id": "scene.evening"
+        }
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "scene.relax",
+       "name": "Relax",
+       "icon": "mdi:leaf",
+       "hide_state": true,
+       "grid_options": {
+        "columns": 3
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "scene.turn_on",
+        "target": {
+         "entity_id": "scene.relax"
+        }
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "scene.night",
+       "name": "Night",
+       "icon": "mdi:weather-night",
+       "hide_state": true,
+       "grid_options": {
+        "columns": 2
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "scene.turn_on",
+        "target": {
+         "entity_id": "scene.night"
+        }
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "script.movie_time",
+       "name": "Movie time",
+       "icon": "mdi:movie-open",
+       "hide_state": true,
+       "grid_options": {
+        "columns": 2
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "script.turn_on",
+        "target": {
+         "entity_id": "script.movie_time"
+        }
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "script.all_off",
+       "name": "All off",
+       "icon": "mdi:power",
+       "hide_state": true,
+       "grid_options": {
+        "columns": 2
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "script.turn_on",
+        "target": {
+         "entity_id": "script.all_off"
+        }
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(min-width: 1024px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "weather-forecast",
+       "entity": "weather.forecast_home",
+       "forecast_type": "daily",
+       "show_current": true,
+       "show_forecast": true,
+       "grid_options": {
+        "columns": 12,
+        "rows": 4
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(min-width: 1024px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "column_span": 2,
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Living Room",
+       "heading_style": "title",
+       "badges": [
+        {
+         "type": "entity",
+         "entity": "sensor.living_room_lights_on",
+         "show_state": true
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "light.living_room_lights",
+       "name": "All lights",
+       "grid_options": {
+        "columns": 12
+       },
+       "features_position": "inline",
+       "features": [
+        {
+         "type": "light-brightness"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "light.light_1",
+       "name": "Light 1",
+       "grid_options": {
+        "columns": 4
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "light-brightness"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "light.light_2",
+       "name": "Light 2",
+       "grid_options": {
+        "columns": 4
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "light-brightness"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "light.h619a",
+       "name": "Floor lamp",
+       "grid_options": {
+        "columns": 4
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "light-brightness"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "light.bedside_lamp",
+       "name": "Bedside lamp",
+       "grid_options": {
+        "columns": 4
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "light-brightness"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "light.tv_ambilight",
+       "name": "Ambilight",
+       "grid_options": {
+        "columns": 4
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "light-brightness"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "switch.tv_ambilight_hue",
+       "name": "Ambilight + Hue",
+       "grid_options": {
+        "columns": 4
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "toggle"
+        }
+       ]
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(min-width: 1024px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Television",
+       "heading_style": "title"
+      },
+      {
+       "type": "tile",
+       "entity": "media_player.tv",
+       "name": "TV",
+       "icon": "mdi:television",
+       "grid_options": {
+        "columns": 12
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "media_player.toggle",
+        "target": {
+         "entity_id": "media_player.tv"
+        }
+       }
+      },
+      {
+       "type": "markdown",
+       "grid_options": {
+        "columns": 12
+       },
+       "text_only": true,
+       "content": "Turn the TV on to show the remote.",
+       "visibility": [
+        {
+         "condition": "state",
+         "entity": "media_player.tv",
+         "state": "off"
+        }
+       ]
+      },
+      {
+       "type": "conditional",
+       "grid_options": {
+        "columns": 12,
+        "rows": "auto"
+       },
+       "conditions": [
+        {
+         "condition": "state",
+         "entity": "media_player.tv",
+         "state_not": "off"
+        }
+       ],
+       "card": {
+        "type": "vertical-stack",
+        "cards": [
+         {
+          "type": "grid",
+          "columns": 3,
+          "square": false,
+          "cards": [
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:volume-plus",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "VOLUME_UP"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-up",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_UP"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-up-box-outline",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "CHANNEL_UP"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-left",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_LEFT"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:circle-double",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_CENTER"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-right",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_RIGHT"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:volume-minus",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "VOLUME_DOWN"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-down",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_DOWN"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-down-box-outline",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "CHANNEL_DOWN"
+             }
+            }
+           }
+          ]
+         },
+         {
+          "type": "grid",
+          "columns": 4,
+          "square": false,
+          "cards": [
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:arrow-u-left-top",
+            "name": "Back",
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "BACK"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:home-outline",
+            "name": "Home",
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "HOME"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:menu",
+            "name": "Menu",
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "MENU"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:volume-off",
+            "name": "Mute",
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "VOLUME_MUTE"
+             }
+            }
+           }
+          ]
+         },
+         {
+          "type": "grid",
+          "columns": 4,
+          "square": false,
+          "cards": [
+           {
+            "type": "button",
+            "entity": "media_player.tv",
+            "name": "YouTube",
+            "icon": "mdi:youtube",
+            "show_state": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "media_player.play_media",
+             "target": {
+              "entity_id": "media_player.tv"
+             },
+             "data": {
+              "media_content_type": "app",
+              "media_content_id": "com.google.android.apps.youtube.tv.activity.ShellActivity-com.google.android.youtube.tv"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "media_player.tv",
+            "name": "Moonfin",
+            "icon": "mdi:moon-waning-crescent",
+            "show_state": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "media_player.play_media",
+             "target": {
+              "entity_id": "media_player.tv"
+             },
+             "data": {
+              "media_content_type": "app",
+              "media_content_id": "org.moonfin.androidtv.MainActivity-org.moonfin.androidtv"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "media_player.tv",
+            "name": "Wholphin",
+            "icon": "mdi:dolphin",
+            "show_state": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "media_player.play_media",
+             "target": {
+              "entity_id": "media_player.tv"
+             },
+             "data": {
+              "media_content_type": "app",
+              "media_content_id": "com.github.damontecres.wholphin.MainActivity-com.github.damontecres.wholphin"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "media_player.tv",
+            "name": "Jellyfin",
+            "icon": "mdi:jellyfish-outline",
+            "show_state": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "media_player.play_media",
+             "target": {
+              "entity_id": "media_player.tv"
+             },
+             "data": {
+              "media_content_type": "app",
+              "media_content_id": "org.jellyfin.androidtv.ui.startup.StartupActivity-org.jellyfin.androidtv"
+             }
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(min-width: 1024px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Bedroom",
+       "heading_style": "title"
+      },
+      {
+       "type": "tile",
+       "entity": "fan.bedroom_fan",
+       "name": "Fan",
+       "grid_options": {
+        "columns": 12
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "fan-speed"
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "heading": "Robot vacuum",
+       "heading_style": "subtitle"
+      },
+      {
+       "type": "tile",
+       "entity": "vacuum.clea_ning",
+       "name": "Clea Ning",
+       "grid_options": {
+        "columns": 12
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "vacuum-commands",
+         "commands": [
+          "start_pause",
+          "return_home"
+         ]
+        }
+       ]
+      },
+      {
+       "type": "glance",
+       "show_icon": false,
+       "columns": 3,
+       "grid_options": {
+        "columns": 12
+       },
+       "entities": [
+        {
+         "entity": "sensor.clea_ning_battery",
+         "name": "Battery"
+        },
+        {
+         "entity": "sensor.clea_ning_filter_life",
+         "name": "Filter"
+        },
+        {
+         "entity": "sensor.clea_ning_mop_life",
+         "name": "Mop"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "select.clea_ning_suction",
+       "name": "Suction",
+       "grid_options": {
+        "columns": 6,
+        "rows": 2
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "select-options"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "select.clea_ning_mop_mode",
+       "name": "Mop",
+       "grid_options": {
+        "columns": 6,
+        "rows": 2
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "select-options"
+        }
+       ]
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(min-width: 1024px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "column_span": 2,
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Desk energy",
+       "heading_style": "title"
+      },
+      {
+       "type": "tile",
+       "entity": "switch.birou",
+       "name": "Birou",
+       "icon": "mdi:desk",
+       "grid_options": {
+        "columns": 3
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "sensor.birou_current_consumption",
+       "name": "Power now",
+       "grid_options": {
+        "columns": 3
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "sensor.desk_cost_today",
+       "name": "Cost today",
+       "icon": "mdi:cash",
+       "grid_options": {
+        "columns": 3
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "sensor.desk_cost_month",
+       "name": "This month",
+       "icon": "mdi:calendar-month",
+       "grid_options": {
+        "columns": 3
+       }
+      },
+      {
+       "type": "statistics-graph",
+       "title": "Energy per day",
+       "entities": [
+        {
+         "entity": "sensor.birou_today_s_consumption",
+         "name": "kWh"
+        }
+       ],
+       "chart_type": "bar",
+       "period": "day",
+       "stat_types": [
+        "change"
+       ],
+       "days_to_show": 14,
+       "hide_legend": true,
+       "grid_options": {
+        "columns": 6,
+        "rows": 4
+       }
+      },
+      {
+       "type": "statistics-graph",
+       "title": "Power, last 24 h",
+       "entities": [
+        {
+         "entity": "sensor.birou_current_consumption",
+         "name": "W"
+        }
+       ],
+       "chart_type": "line",
+       "period": "hour",
+       "stat_types": [
+        "mean"
+       ],
+       "days_to_show": 1,
+       "hide_legend": true,
+       "grid_options": {
+        "columns": 6,
+        "rows": 4
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(min-width: 1024px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Shopping list",
+       "heading_style": "title"
+      },
+      {
+       "type": "todo-list",
+       "entity": "todo.shopping_list",
+       "grid_options": {
+        "columns": 12
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(min-width: 1024px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Scenes",
+       "heading_style": "title"
+      },
+      {
+       "type": "tile",
+       "entity": "scene.evening",
+       "name": "Evening",
+       "icon": "mdi:weather-sunset",
+       "vertical": true,
+       "hide_state": true,
+       "grid_options": {
+        "columns": 4,
+        "rows": 2
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "scene.turn_on",
+        "target": {
+         "entity_id": "scene.evening"
+        }
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "scene.relax",
+       "name": "Relax",
+       "icon": "mdi:leaf",
+       "vertical": true,
+       "hide_state": true,
+       "grid_options": {
+        "columns": 4,
+        "rows": 2
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "scene.turn_on",
+        "target": {
+         "entity_id": "scene.relax"
+        }
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "scene.night",
+       "name": "Night",
+       "icon": "mdi:weather-night",
+       "vertical": true,
+       "hide_state": true,
+       "grid_options": {
+        "columns": 4,
+        "rows": 2
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "scene.turn_on",
+        "target": {
+         "entity_id": "scene.night"
+        }
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "script.movie_time",
+       "name": "Movie time",
+       "icon": "mdi:movie-open",
+       "hide_state": true,
+       "grid_options": {
+        "columns": 6
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "script.turn_on",
+        "target": {
+         "entity_id": "script.movie_time"
+        }
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "script.all_off",
+       "name": "All off",
+       "icon": "mdi:power",
+       "hide_state": true,
+       "grid_options": {
+        "columns": 6
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "script.turn_on",
+        "target": {
+         "entity_id": "script.all_off"
+        }
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(max-width: 1023px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "column_span": 2,
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Living Room",
+       "heading_style": "title",
+       "badges": [
+        {
+         "type": "entity",
+         "entity": "sensor.living_room_lights_on",
+         "show_state": true
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "light.living_room_lights",
+       "name": "All lights",
+       "grid_options": {
+        "columns": 12
+       },
+       "features_position": "inline",
+       "features": [
+        {
+         "type": "light-brightness"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "light.light_1",
+       "name": "Light 1",
+       "grid_options": {
+        "columns": 4
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "light.light_2",
+       "name": "Light 2",
+       "grid_options": {
+        "columns": 4
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "light.h619a",
+       "name": "Floor lamp",
+       "grid_options": {
+        "columns": 4
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "light.bedside_lamp",
+       "name": "Bedside lamp",
+       "grid_options": {
+        "columns": 4
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "light.tv_ambilight",
+       "name": "Ambilight",
+       "grid_options": {
+        "columns": 4
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "switch.tv_ambilight_hue",
+       "name": "Ambilight + Hue",
+       "grid_options": {
+        "columns": 4
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(max-width: 1023px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Television",
+       "heading_style": "title"
+      },
+      {
+       "type": "tile",
+       "entity": "media_player.tv",
+       "name": "TV",
+       "icon": "mdi:television",
+       "grid_options": {
+        "columns": 12
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "media_player.toggle",
+        "target": {
+         "entity_id": "media_player.tv"
+        }
+       }
+      },
+      {
+       "type": "conditional",
+       "grid_options": {
+        "columns": 12,
+        "rows": "auto"
+       },
+       "conditions": [
+        {
+         "condition": "state",
+         "entity": "media_player.tv",
+         "state_not": "off"
+        }
+       ],
+       "card": {
+        "type": "vertical-stack",
+        "cards": [
+         {
+          "type": "grid",
+          "columns": 3,
+          "square": false,
+          "cards": [
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:volume-plus",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "VOLUME_UP"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-up",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_UP"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-up-box-outline",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "CHANNEL_UP"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-left",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_LEFT"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:circle-double",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_CENTER"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-right",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_RIGHT"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:volume-minus",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "VOLUME_DOWN"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-down",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "DPAD_DOWN"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:chevron-down-box-outline",
+            "show_name": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "CHANNEL_DOWN"
+             }
+            }
+           }
+          ]
+         },
+         {
+          "type": "grid",
+          "columns": 4,
+          "square": false,
+          "cards": [
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:arrow-u-left-top",
+            "name": "Back",
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "BACK"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:home-outline",
+            "name": "Home",
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "HOME"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:menu",
+            "name": "Menu",
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "MENU"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "remote.tv",
+            "icon": "mdi:volume-off",
+            "name": "Mute",
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "remote.send_command",
+             "target": {
+              "entity_id": "remote.tv"
+             },
+             "data": {
+              "command": "VOLUME_MUTE"
+             }
+            }
+           }
+          ]
+         },
+         {
+          "type": "grid",
+          "columns": 4,
+          "square": false,
+          "cards": [
+           {
+            "type": "button",
+            "entity": "media_player.tv",
+            "name": "YouTube",
+            "icon": "mdi:youtube",
+            "show_state": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "media_player.play_media",
+             "target": {
+              "entity_id": "media_player.tv"
+             },
+             "data": {
+              "media_content_type": "app",
+              "media_content_id": "com.google.android.apps.youtube.tv.activity.ShellActivity-com.google.android.youtube.tv"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "media_player.tv",
+            "name": "Moonfin",
+            "icon": "mdi:moon-waning-crescent",
+            "show_state": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "media_player.play_media",
+             "target": {
+              "entity_id": "media_player.tv"
+             },
+             "data": {
+              "media_content_type": "app",
+              "media_content_id": "org.moonfin.androidtv.MainActivity-org.moonfin.androidtv"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "media_player.tv",
+            "name": "Wholphin",
+            "icon": "mdi:dolphin",
+            "show_state": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "media_player.play_media",
+             "target": {
+              "entity_id": "media_player.tv"
+             },
+             "data": {
+              "media_content_type": "app",
+              "media_content_id": "com.github.damontecres.wholphin.MainActivity-com.github.damontecres.wholphin"
+             }
+            }
+           },
+           {
+            "type": "button",
+            "entity": "media_player.tv",
+            "name": "Jellyfin",
+            "icon": "mdi:jellyfish-outline",
+            "show_state": false,
+            "tap_action": {
+             "action": "perform-action",
+             "perform_action": "media_player.play_media",
+             "target": {
+              "entity_id": "media_player.tv"
+             },
+             "data": {
+              "media_content_type": "app",
+              "media_content_id": "org.jellyfin.androidtv.ui.startup.StartupActivity-org.jellyfin.androidtv"
+             }
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(max-width: 1023px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Robot vacuum",
+       "heading_style": "title"
+      },
+      {
+       "type": "tile",
+       "entity": "vacuum.clea_ning",
+       "name": "Clea Ning",
+       "grid_options": {
+        "columns": 12
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "vacuum-commands",
+         "commands": [
+          "start_pause",
+          "return_home",
+          "locate"
+         ]
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "select.clea_ning_suction",
+       "name": "Suction",
+       "grid_options": {
+        "columns": 6,
+        "rows": 2
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "select-options"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "select.clea_ning_mop_mode",
+       "name": "Mop",
+       "grid_options": {
+        "columns": 6,
+        "rows": 2
+       },
+       "features_position": "bottom",
+       "features": [
+        {
+         "type": "select-options"
+        }
+       ]
+      },
+      {
+       "type": "glance",
+       "show_icon": false,
+       "columns": 3,
+       "grid_options": {
+        "columns": 12
+       },
+       "entities": [
+        {
+         "entity": "sensor.clea_ning_battery",
+         "name": "Battery"
+        },
+        {
+         "entity": "sensor.clea_ning_filter_life",
+         "name": "Filter"
+        },
+        {
+         "entity": "sensor.clea_ning_mop_life",
+         "name": "Mop"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "button.clea_ning_wash_mop",
+       "name": "Wash mop",
+       "icon": "mdi:water-sync",
+       "hide_state": true,
+       "grid_options": {
+        "columns": 12
+       },
+       "tap_action": {
+        "action": "perform-action",
+        "perform_action": "button.press",
+        "target": {
+         "entity_id": "button.clea_ning_wash_mop"
+        }
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(max-width: 1023px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Bedroom",
+       "heading_style": "title"
+      },
+      {
+       "type": "tile",
+       "entity": "fan.bedroom_fan",
+       "name": "Fan",
+       "grid_options": {
+        "columns": 12
+       },
+       "features_position": "inline",
+       "features": [
+        {
+         "type": "fan-speed"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "sensor.bedroom_temperature",
+       "name": "Temperature",
+       "grid_options": {
+        "columns": 6
+       },
+       "visibility": [
+        {
+         "condition": "state",
+         "entity": "sensor.bedroom_temperature",
+         "state_not": "unknown"
+        },
+        {
+         "condition": "state",
+         "entity": "sensor.bedroom_temperature",
+         "state_not": "unavailable"
+        }
+       ]
+      },
+      {
+       "type": "tile",
+       "entity": "sensor.bedroom_humidity",
+       "name": "Humidity",
+       "grid_options": {
+        "columns": 6
+       },
+       "visibility": [
+        {
+         "condition": "state",
+         "entity": "sensor.bedroom_humidity",
+         "state_not": "unknown"
+        },
+        {
+         "condition": "state",
+         "entity": "sensor.bedroom_humidity",
+         "state_not": "unavailable"
+        }
+       ]
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(max-width: 1023px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Desk",
+       "heading_style": "title"
+      },
+      {
+       "type": "tile",
+       "entity": "switch.birou",
+       "name": "Birou",
+       "icon": "mdi:desk",
+       "grid_options": {
+        "columns": 6
+       }
+      },
+      {
+       "type": "tile",
+       "entity": "sensor.birou_current_consumption",
+       "name": "Power now",
+       "grid_options": {
+        "columns": 6
+       }
+      },
+      {
+       "type": "statistics-graph",
+       "entities": [
+        {
+         "entity": "sensor.birou_current_consumption",
+         "name": "Power"
+        }
+       ],
+       "chart_type": "line",
+       "period": "hour",
+       "stat_types": [
+        "mean"
+       ],
+       "days_to_show": 1,
+       "hide_legend": true,
+       "grid_options": {
+        "columns": 12,
+        "rows": 3
+       }
+      },
+      {
+       "type": "glance",
+       "show_icon": false,
+       "columns": 3,
+       "grid_options": {
+        "columns": 12
+       },
+       "entities": [
+        {
+         "entity": "sensor.birou_today_s_consumption",
+         "name": "Today"
+        },
+        {
+         "entity": "sensor.desk_cost_today",
+         "name": "Cost today"
+        },
+        {
+         "entity": "sensor.desk_cost_month",
+         "name": "This month"
+        }
+       ]
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(max-width: 1023px)"
+      }
+     ]
+    },
+    {
+     "type": "grid",
+     "cards": [
+      {
+       "type": "heading",
+       "heading": "Shopping list",
+       "heading_style": "title"
+      },
+      {
+       "type": "todo-list",
+       "entity": "todo.shopping_list",
+       "grid_options": {
+        "columns": 12
+       }
+      }
+     ],
+     "visibility": [
+      {
+       "condition": "screen",
+       "media_query": "(max-width: 1023px)"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

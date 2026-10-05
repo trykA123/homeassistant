@@ -1,0 +1,28 @@
+- id: tv_night_off
+  alias: TV off when idle at night
+  description: Turn the TV off if it has sat on the home screen for 30 minutes late at night.
+  triggers:
+    - trigger: state
+      entity_id: remote.tv
+      attribute: current_activity
+      to: com.leanbitlab.ltvL.a3
+      for: "00:30:00"
+    - trigger: time
+      at: "01:00:00"
+  conditions:
+    - condition: time
+      after: "23:00:00"
+      before: "05:00:00"
+    - condition: state
+      entity_id: media_player.tv
+      state: "on"
+    - condition: state
+      entity_id: remote.tv
+      attribute: current_activity
+      state: com.leanbitlab.ltvL.a3
+      for: "00:30:00"
+  actions:
+    - action: media_player.turn_off
+      target:
+        entity_id: media_player.tv
+  mode: single

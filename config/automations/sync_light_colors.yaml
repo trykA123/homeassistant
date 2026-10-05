@@ -1,0 +1,96 @@
+- id: sync_light_colors
+  alias: "Sync Light Colors"
+  description: "Synchronize color temperature and RGB colors across all living room lights when Sync Mode is on."
+  mode: single
+  max_exceeded: silent
+  triggers:
+    - id: "color_temp_changed"
+      trigger: state
+      entity_id:
+        - light.light_1
+        - light.light_2
+        - light.h619a
+      attribute: color_temp_kelvin
+    - id: "rgb_changed"
+      trigger: state
+      entity_id:
+        - light.light_1
+        - light.light_2
+        - light.h619a
+      attribute: rgb_color
+    - id: "sync_turned_on"
+      trigger: state
+      entity_id: input_boolean.sync_light_colors
+      to: "on"
+  conditions:
+    - condition: state
+      entity_id: input_boolean.sync_light_colors
+      state: "on"
+  actions:
+    - choose:
+        # 1. Triggered by a light changing color temperature (warm/cold)
+        - conditions:
+            - condition: trigger
+              id: "color_temp_changed"
+            - condition: template
+              value_template: >-
+                {{ trigger.to_state is defined 
+                   and trigger.to_state.attributes.color_mode == 'color_temp'
+                   and trigger.to_state.attributes.color_temp_kelvin is defined }}
+          sequence:
+            - action: light.turn_on
+              target:
+                entity_id:
+                  - light.light_1
+                  - light.light_2
+                  - light.h619a
+              data:
+                color_temp_kelvin: "{{ trigger.to_state.attributes.color_temp_kelvin }}"
+
+        # 2. Triggered by a light changing RGB color
+        - conditions:
+            - condition: trigger
+              id: "rgb_changed"
+            - condition: template
+              value_template: >-
+                {{ trigger.to_state is defined 
+                   and trigger.to_state.attributes.color_mode != 'color_temp'
+                   and trigger.to_state.attributes.rgb_color is defined }}
+          sequence:
+            - action: light.turn_on
+              target:
+                entity_id:
+                  - light.light_1
+                  - light.light_2
+                  - light.h619a
+              data:
+                rgb_color: "{{ trigger.to_state.attributes.rgb_color }}"
+
+        # 3. Triggered by Sync Mode being turned on: copy from the first active light
+        - conditions:
+            - condition: trigger
+              id: "sync_turned_on"
+          sequence:
+            - choose:
+                - conditions:
+                    - condition: template
+                      value_template: "{{ state_attr('light.light_1', 'color_mode') == 'color_temp' and state_attr('light.light_1', 'color_temp_kelvin') is not none }}"
+                  sequence:
+                    - action: light.turn_on
+                      target:
+                        entity_id:
+                          - light.light_2
+                          - light.h619a
+                      data:
+                        color_temp_kelvin: "{{ state_attr('light.light_1', 'color_temp_kelvin') }}"
+                - conditions:
+                    - condition: template
+                      value_template: "{{ state_attr('light.light_1', 'rgb_color') is not none }}"
+                  sequence:
+                    - action: light.turn_on
+                      target:
+                        entity_id:
+                          - light.light_2
+                          - light.h619a
+                      data:
+                        rgb_color: "{{ state_attr('light.light_1', 'rgb_color') }}"

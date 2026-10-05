@@ -1,0 +1,299 @@
+# Prototype 1 — "Paper": wall-tablet glance panel (landscape, ~1280x800).
+# Design read: household wall panel for anyone passing by; calm warm light mode;
+# editorial serif + ink on paper. Dials: variance 4 / motion 2 / density 3.
+# Rule: everything is one tap. Brightness is a direct slider (no dialogs).
+# Source of truth for the storage dashboard /proto-paper (pushed by scripts/push-dashboards.mjs).
+
+button_card_templates:
+  paper_scene:
+    show_icon: true
+    show_name: true
+    show_label: true
+    show_state: false
+    triggers_update:
+      - scene.evening
+      - scene.relax
+      - scene.night
+      - script.movie_time
+      - script.all_off
+      - sensor.living_room_lights_on
+    tap_action:
+      action: perform-action
+      perform_action: "[[[ return entity.entity_id.startsWith('script.') ? 'script.turn_on' : 'scene.turn_on' ]]]"
+      target:
+        entity_id: "[[[ return entity.entity_id ]]]"
+      haptic: light
+    hold_action:
+      action: none
+    styles:
+      card:
+        - height: 104px
+        - padding: 14px 16px
+        - border-radius: 16px
+        - transition: background 240ms ease, color 240ms ease, transform 120ms ease
+      grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: 1fr min-content min-content
+        - justify-items: start
+      icon:
+        - width: 24px
+      img_cell:
+        - justify-self: start
+        - width: 24px
+        - height: 24px
+      name:
+        - justify-self: start
+        - font-family: "Georgia, 'Times New Roman', serif"
+        - font-size: 21px
+        - margin-top: 8px
+      label:
+        - justify-self: start
+        - font-size: 12.5px
+        - opacity: "0.72"
+    extra_styles: >-
+      [[[
+        const ids = ['scene.evening','scene.relax','scene.night','script.movie_time','script.all_off'];
+        const when = (id) => {
+          const s = states[id]; if (!s) return 0;
+          const t = id.startsWith('script.') ? s.attributes.last_triggered : s.state;
+          const ms = Date.parse(t); return isNaN(ms) ? 0 : ms;
+        };
+        const newest = ids.reduce((a, b) => (when(b) > when(a) ? b : a));
+        const lit = Number(states['sensor.living_room_lights_on']?.state || 0) > 0;
+        const fits = newest === 'script.all_off' ? !lit : lit;
+        const active = newest === entity.entity_id && fits && Date.now() - when(newest) < 6 * 3600e3;
+        return `
+          ha-card { background: ${active ? '#1f1b16' : '#f8f4ec'} !important;
+                    color: ${active ? '#fbf8f2' : '#1f1b16'} !important; }
+          ha-card:active { transform: scale(.98); }
+          #icon { color: ${active ? '#f0b27a' : '#b5532a'} !important; }
+        `;
+      ]]]
+
+  paper_label:
+    show_icon: false
+    show_state: false
+    show_name: true
+    tap_action:
+      action: none
+    styles:
+      card:
+        - padding: 0 2px
+        - background: none
+        - border: none
+        - box-shadow: none
+      name:
+        - justify-self: start
+        - font-size: 11.5px
+        - font-weight: 600
+        - letter-spacing: .14em
+        - text-transform: uppercase
+        - color: var(--secondary-text-color)
+
+title: Paper
+views:
+  - title: Home
+    path: home
+    icon: mdi:tablet
+    theme: Paper
+    type: sections
+    max_columns: 3
+    dense_section_placement: false
+    sections:
+      # ── Column 1: time, day, weather ────────────────────────────────
+      - type: grid
+        cards:
+          - type: clock
+            clock_size: large
+            time_format: "24"
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                ha-card { background: none !important; border: none !important; padding: 8px 0 0 !important; }
+                .time-parts, .time { font-family: Georgia, 'Times New Roman', serif !important; font-weight: 400 !important; letter-spacing: -.02em; }
+          - type: custom:button-card
+            entity: sun.sun
+            show_icon: false
+            show_name: false
+            show_state: false
+            tap_action: { action: none }
+            grid_options: { columns: full, rows: auto }
+            triggers_update:
+              - weather.forecast_home
+              - sensor.home_greeting
+              - person.claud
+            custom_fields:
+              day: >-
+                [[[
+                  const d = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+                  return `<div class="day">${d}</div>`;
+                ]]]
+              line: >-
+                [[[
+                  const up = entity.state === 'above_horizon';
+                  const at = states[up ? 'sensor.sun_next_setting' : 'sensor.sun_next_rising']?.state;
+                  const hm = at ? new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '–';
+                  const who = states['person.claud']?.state === 'home' ? 'Claud is home' : 'Nobody home';
+                  return `<div class="line"><span>${up ? 'Sunset' : 'Sunrise'} ${hm}</span><span class="dot"></span><span>${who}</span></div>`;
+                ]]]
+            styles:
+              card: [padding: 0 4px 12px, background: none, border: none, box-shadow: none]
+              grid:
+                - grid-template-areas: '"day" "line"'
+                - row-gap: 6px
+              custom_fields:
+                day: [justify-self: start]
+                line: [justify-self: start]
+            extra_styles: |
+              .day { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; color: var(--primary-text-color); }
+              .line { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--secondary-text-color); }
+              .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+          - type: weather-forecast
+            entity: weather.forecast_home
+            show_current: true
+            show_forecast: true
+            forecast_type: daily
+            forecast_slots: 5
+            grid_options: { columns: full }
+
+      # ── Column 2: moments + lights ──────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:button-card
+            template: paper_label
+            name: Moments
+            grid_options: { columns: full }
+          - type: custom:button-card
+            template: paper_scene
+            entity: scene.evening
+            name: Evening
+            label: Soft and warm
+            icon: mdi:weather-sunset
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: paper_scene
+            entity: scene.relax
+            name: Relax
+            label: Low amber
+            icon: mdi:sofa-outline
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: paper_scene
+            entity: script.movie_time
+            name: Movie
+            label: TV + warm strip
+            icon: mdi:movie-open-outline
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: paper_scene
+            entity: script.all_off
+            name: All off
+            label: Lights and TV
+            icon: mdi:power
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: paper_label
+            name: Living room lights
+            grid_options: { columns: full }
+          - type: tile
+            entity: light.living_room_lights
+            name: All lamps
+            icon: mdi:lightbulb-group-outline
+            vertical: false
+            features_position: bottom
+            features:
+              - type: light-brightness
+            grid_options: { columns: full, rows: 2 }
+          - type: tile
+            entity: light.light_1
+            name: Lamp one
+            icon: mdi:floor-lamp-outline
+            features_position: bottom
+            features:
+              - type: light-brightness
+            grid_options: { columns: 6, rows: 2 }
+          - type: tile
+            entity: light.light_2
+            name: Lamp two
+            icon: mdi:floor-lamp-outline
+            features_position: bottom
+            features:
+              - type: light-brightness
+            grid_options: { columns: 6, rows: 2 }
+          - type: tile
+            entity: light.h619a
+            name: LED strip
+            icon: mdi:led-strip-variant
+            features_position: bottom
+            features:
+              - type: light-brightness
+            grid_options: { columns: 6, rows: 2 }
+          - type: tile
+            entity: light.tv_ambilight
+            name: Ambilight
+            icon: mdi:television-ambient-light
+            features_position: bottom
+            features:
+              - type: light-brightness
+            grid_options: { columns: 6, rows: 2 }
+
+      # ── Column 3: TV + house notes ──────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:button-card
+            template: paper_label
+            name: Television
+            grid_options: { columns: full }
+          - type: tile
+            entity: media_player.tv
+            name: Philips TV
+            icon: mdi:television
+            features_position: bottom
+            features:
+              - type: media-player-volume-slider
+            grid_options: { columns: full, rows: 2 }
+          - type: custom:button-card
+            template: paper_label
+            name: House notes
+            grid_options: { columns: full }
+          # Plain-language notes. Each line only appears when it is worth saying.
+          - type: custom:button-card
+            entity: sensor.unavailable_devices
+            show_icon: false
+            show_name: false
+            show_state: false
+            tap_action: { action: more-info }
+            grid_options: { columns: full }
+            triggers_update:
+              - sensor.birou_current_consumption
+              - sensor.desk_cost_today
+              - binary_sensor.birou_overloaded
+              - sensor.living_room_lights_on
+              - media_player.tv
+            custom_fields:
+              notes: >-
+                [[[
+                  const out = [];
+                  const n = Number(entity.state) || 0;
+                  const names = entity.attributes.names || [];
+                  if (n > 0) out.push(['warn', `${names.join(', ') || n + ' device(s)'} ${n === 1 ? 'is' : 'are'} offline.`]);
+                  if (states['binary_sensor.birou_overloaded']?.state === 'on') out.push(['warn', 'The desk plug is overloaded.']);
+                  const w = Math.round(Number(states['sensor.birou_current_consumption']?.state) || 0);
+                  const lei = Number(states['sensor.desk_cost_today']?.state || 0).toFixed(2);
+                  out.push(['', w > 5 ? `The desk draws ${w} W now. ${lei} lei today.` : `The desk is idle. ${lei} lei today.`]);
+                  const lit = Number(states['sensor.living_room_lights_on']?.state) || 0;
+                  out.push(['', lit === 0 ? 'All living room lamps are off.' : `${lit} of 3 lamps are on.`]);
+                  if (states['media_player.tv']?.state === 'on') out.push(['', `The TV is on${states['media_player.tv'].attributes.app_name ? ' · ' + states['media_player.tv'].attributes.app_name : ''}.`]);
+                  return out.map(([c, t]) => `<p class="${c}">${t}</p>`).join('');
+                ]]]
+            styles:
+              card: [padding: 18px 20px]
+              grid:
+                - grid-template-areas: '"notes"'
+              custom_fields:
+                notes: [justify-self: stretch, text-align: left, white-space: normal]
+            extra_styles: |
+              p { margin: 0; padding: 10px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 17px; line-height: 1.4;
+                  color: var(--primary-text-color); border-bottom: 1px solid var(--divider-color); }
+              p:last-child { border-bottom: none; }
+              p.warn { color: #b8412f; }

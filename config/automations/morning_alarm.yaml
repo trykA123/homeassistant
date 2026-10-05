@@ -1,0 +1,17 @@
+- id: morning_alarm
+  alias: Morning after alarm
+  description: When the iPhone alarm is stopped on a weekday morning, run Good morning.
+  triggers:
+    - trigger: event
+      event_type: morning_alarm_stopped
+  conditions:
+    - condition: time
+      after: "04:00:00"
+      before: "11:00:00"
+      weekday: [mon, tue, wed, thu, fri]
+    - condition: state
+      entity_id: person.claud
+      state: home
+  actions:
+    - action: script.good_morning
+  mode: single

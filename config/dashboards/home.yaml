@@ -1,0 +1,663 @@
+button_card_templates:
+  ember_base:
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    show_icon: false
+    show_name: false
+    show_state: false
+    styles:
+      card:
+        - padding: 0
+        - background: none
+        - border: none
+        - box-shadow: none
+        - backdrop-filter: none
+        - overflow: visible
+
+  moment:
+    show_icon: true
+    show_name: true
+    show_label: true
+    show_state: false
+    triggers_update:
+      - scene.evening
+      - scene.relax
+      - script.movie_time
+      - script.all_off
+      - sensor.living_room_lights_on
+    variables:
+      tint: "255,184,107"
+      ink: "#ffb86b"
+    tap_action:
+      action: perform-action
+      perform_action: "[[[ return entity.entity_id.startsWith('script.') ? 'script.turn_on' : 'scene.turn_on' ]]]"
+      target:
+        entity_id: "[[[ return entity.entity_id ]]]"
+      haptic: light
+    hold_action:
+      action: none
+    styles:
+      card:
+        - height: 118px
+        - padding: 14px
+        - border-radius: 24px
+        - transition: transform 160ms cubic-bezier(.2,0,0,1), background 300ms ease, border-color 300ms ease
+      grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: 1fr min-content min-content
+        - justify-items: start
+      img_cell:
+        - justify-self: start
+        - width: 38px
+        - height: 38px
+        - border-radius: 13px
+        - background: "[[[ return `rgba(${variables.tint},0.12)` ]]]"
+      icon:
+        - width: 20px
+        - color: "[[[ return variables.ink ]]]"
+      name:
+        - justify-self: start
+        - margin-top: 14px
+        - font-size: 16px
+        - font-weight: 700
+        - color: var(--primary-text-color)
+      label:
+        - justify-self: start
+        - font-size: 12.5px
+        - color: var(--secondary-text-color)
+    extra_styles: >-
+      [[[
+        const ids = ['scene.evening','scene.relax','script.movie_time','script.all_off'];
+        const when = (id) => {
+          const s = states[id];
+          if (!s) return 0;
+          const t = id.startsWith('script.') ? s.attributes.last_triggered : s.state;
+          const ms = Date.parse(t);
+          return isNaN(ms) ? 0 : ms;
+        };
+        const newest = ids.reduce((a, b) => (when(b) > when(a) ? b : a));
+        const lit = Number(states['sensor.living_room_lights_on']?.state || 0) > 0;
+        const fits = newest === 'script.all_off' ? !lit : lit;
+        const active = Date.now() - when(newest) < 6 * 3600 * 1000 && newest === entity.entity_id && fits;
+        const t = variables.tint;
+        return `
+          ha-card { border: 1px solid ${active ? `rgba(${t},0.45)` : 'rgba(255,226,200,0.06)'} !important;
+            background: ${active ? `linear-gradient(155deg, rgba(${t},0.28), rgba(34,27,23,0.7) 72%)` : 'rgba(34,27,23,0.62)'} !important;
+            box-shadow: ${active ? `0 18px 40px -22px rgba(${t},0.6)` : 'none'} !important; }
+          ha-card:active { transform: scale(.97); }
+          #img-cell { background: rgba(${t},${active ? 0.24 : 0.12}) !important; }
+        `;
+      ]]]
+
+  light_column:
+    show_icon: false
+    show_name: true
+    show_label: true
+    show_state: false
+    tap_action:
+      action: toggle
+      haptic: light
+    hold_action:
+      action: more-info
+      haptic: medium
+    variables:
+      rgb: "255,196,128"
+      sub_on: "2700 K"
+    label: >-
+      [[[
+        if (entity.state !== 'on') return entity.state === 'unavailable' ? 'Offline' : 'Tap to turn on';
+        const k = entity.attributes.color_temp_kelvin;
+        return entity.attributes.color_mode === 'color_temp' && k ? `${k} K` : variables.sub_on;
+      ]]]
+    custom_fields:
+      pct: >-
+        [[[
+          if (entity.state !== 'on') return 'Off';
+          return Math.round((entity.attributes.brightness ?? 255) / 2.55) + '%';
+        ]]]
+      fill: " "
+    styles:
+      card:
+        - height: 196px
+        - padding: 0
+        - border-radius: 26px
+        - background: rgba(255,226,200,0.04)
+        - border: 1px solid rgba(255,226,200,0.07)
+        - overflow: hidden
+        - backdrop-filter: none
+      grid:
+        - grid-template-areas: '"pct" "." "n" "l"'
+        - grid-template-rows: min-content 1fr min-content min-content
+        - height: 100%
+      custom_fields:
+        fill:
+          - position: absolute
+          - left: 0
+          - right: 0
+          - bottom: 0
+          - transition: height 420ms cubic-bezier(.2,.8,.2,1)
+          - height: >-
+              [[[ return entity.state === 'on' ? Math.max(Math.round((entity.attributes.brightness ?? 255) / 2.55), 12) + '%' : '0%' ]]]
+          - background: >-
+              [[[
+                const c = entity.attributes.rgb_color ? entity.attributes.rgb_color.join(',') : variables.rgb;
+                return `linear-gradient(180deg, rgba(${c},1), rgba(${c},0.78))`;
+              ]]]
+          - box-shadow: >-
+              [[[
+                const c = entity.attributes.rgb_color ? entity.attributes.rgb_color.join(',') : variables.rgb;
+                return `0 -10px 40px rgba(${c},0.35)`;
+              ]]]
+        pct:
+          - position: relative
+          - justify-self: start
+          - padding: 14px 0 0 14px
+          - font-size: 22px
+          - font-weight: 700
+          - font-variant-numeric: tabular-nums
+          - color: "[[[ return entity.state === 'on' ? '#1a1410' : '#8a7b6f' ]]]"
+      name:
+        - position: relative
+        - justify-self: start
+        - padding: 0 14px
+        - font-size: 14px
+        - font-weight: 700
+        - color: >-
+            [[[ return entity.state === 'on' && (entity.attributes.brightness ?? 255) > 77 ? '#1a1410' : 'var(--primary-text-color)' ]]]
+      label:
+        - position: relative
+        - justify-self: start
+        - padding: 0 14px 14px
+        - font-size: 12px
+        - color: >-
+            [[[ return entity.state === 'on' && (entity.attributes.brightness ?? 255) > 77 ? 'rgba(26,20,16,0.65)' : 'var(--secondary-text-color)' ]]]
+
+  panel_title:
+    show_icon: false
+    show_state: false
+    show_name: true
+    show_label: true
+    styles:
+      card:
+        - padding: 0 4px
+        - height: 40px
+        - overflow: visible
+        - background: none
+        - border: none
+        - box-shadow: none
+        - backdrop-filter: none
+      grid:
+        - grid-template-areas: '"n l"'
+        - grid-template-columns: 1fr auto
+        - align-items: baseline
+      name:
+        - justify-self: start
+        - font-family: "'Instrument Serif', Georgia, serif"
+        - font-size: 28px
+        - font-weight: 400
+      label:
+        - font-size: 13px
+        - font-weight: 600
+        - color: var(--secondary-text-color)
+        - overflow: visible
+        - padding-right: 2px
+
+  stat:
+    show_icon: false
+    show_name: true
+    show_state: true
+    show_label: true
+    tap_action:
+      action: more-info
+    styles:
+      card:
+        - padding: 14px
+        - border-radius: 18px
+        - background: rgba(255,226,200,0.04)
+        - border: none
+        - box-shadow: none
+        - backdrop-filter: none
+      grid:
+        - grid-template-areas: '"n" "s" "l"'
+        - justify-items: start
+        - row-gap: 2px
+      name:
+        - font-size: 12px
+        - color: var(--secondary-text-color)
+      state:
+        - font-size: 20px
+        - font-weight: 700
+        - font-variant-numeric: tabular-nums
+      label:
+        - font-size: 13px
+        - color: "#ffb86b"
+
+title: Home
+views:
+  - title: Home
+    path: home
+    icon: mdi:home-heart
+    type: sections
+    max_columns: 3
+    dense_section_placement: true
+    card_mod:
+      style: |
+        hui-sections-view { position: relative; }
+        hui-sections-view::before {
+          content: ""; position: absolute; left: -200px; top: -240px; width: 820px; height: 820px;
+          border-radius: 50%; pointer-events: none; z-index: 0;
+          background: radial-gradient(circle, rgba(255,122,61,{{ (0.07 + (states('sensor.living_room_lights_on') | int(0)) / 3 * 0.18) | round(2) }}), transparent 62%);
+          transition: background 600ms ease;
+        }
+    sections:
+      - type: grid
+        cards:
+          - type: custom:button-card
+            template: ember_base
+            entity: person.claud
+            triggers_update:
+              - sensor.home_greeting
+              - weather.forecast_home
+              - sun.sun
+            grid_options: { columns: full }
+            custom_fields:
+              top: >-
+                [[[
+                  const home = entity.state === 'home';
+                  const txt = home ? 'Home' : (entity.state === 'not_home' ? 'Away' : entity.state);
+                  return `<div class="top"><span class="eyebrow">Home</span>
+                    <span class="pill ${home ? 'on' : ''}"><i></i>${txt}</span></div>`;
+                ]]]
+              hello: >-
+                [[[
+                  const g = states['sensor.home_greeting']?.state ?? 'Hello';
+                  const parts = g.split(' ');
+                  const last = parts.pop();
+                  return `<h1>${parts.join(' ')} <em>${last}</em></h1>`;
+                ]]]
+              meta: >-
+                [[[
+                  const w = states['weather.forecast_home'];
+                  const d = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+                  const cond = w ? w.state.replace('partlycloudy','partly cloudy').replace('clear-night','clear').replace('-', ' ') : '';
+                  const t = w ? Math.round(w.attributes.temperature) + '°' : '';
+                  const up = states['sun.sun']?.state === 'above_horizon';
+                  const at = states[up ? 'sensor.sun_next_setting' : 'sensor.sun_next_rising']?.state;
+                  const hm = at ? new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+                  return `<p>${d} · ${t} and ${cond} · ${up ? 'sunset' : 'sunrise'} ${hm}</p>`;
+                ]]]
+            styles:
+              grid:
+                - grid-template-areas: '"top" "hello" "meta"'
+                - row-gap: 8px
+              custom_fields:
+                meta: [white-space: normal, overflow: visible, justify-self: start]
+                hello: [overflow: visible, justify-self: start]
+            extra_styles: |
+              .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+              .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--secondary-text-color); }
+              .pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 9px; border-radius: 999px;
+                background: rgba(255,226,200,.06); border: 1px solid rgba(255,226,200,.08); font-size: 13px; font-weight: 600; color: #c9bbaf; }
+              .pill i { width: 8px; height: 8px; border-radius: 50%; background: #a8998c; }
+              .pill.on i { background: #8fd694; box-shadow: 0 0 10px #8fd694; }
+              h1 { margin: 0; text-align: left; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400;
+                font-size: clamp(50px, 14vw, 64px); line-height: .95; letter-spacing: -.01em; color: var(--primary-text-color); }
+              h1 em { color: #ffb86b; }
+              p { margin: 0; text-align: left; font-size: 15px; line-height: 1.5; color: var(--secondary-text-color); }
+          - type: custom:button-card
+            template: moment
+            entity: script.movie_time
+            name: Movie
+            label: TV + warm strip
+            icon: mdi:movie-open-outline
+            variables: { tint: "255,122,61", ink: "#ff8a4c" }
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: moment
+            entity: scene.evening
+            name: Evening
+            label: Soft and warm
+            icon: mdi:weather-sunset
+            variables: { tint: "255,184,107", ink: "#ffb86b" }
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: moment
+            entity: scene.relax
+            name: Relax
+            label: Low amber
+            icon: mdi:sofa-outline
+            variables: { tint: "217,140,255", ink: "#d98cff" }
+            grid_options: { columns: 6 }
+          - type: custom:button-card
+            template: moment
+            entity: script.all_off
+            name: All off
+            label: Lights and TV
+            icon: mdi:power
+            variables: { tint: "255,226,200", ink: "#c9bbaf" }
+            grid_options: { columns: 6 }
+
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root { gap: 16px !important; padding: 20px; border-radius: 28px;
+                  background: rgba(34,27,23,.62); border: 1px solid rgba(255,226,200,.06);
+                  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+            cards:
+              - type: custom:button-card
+                template: panel_title
+                entity: sensor.living_room_lights_on
+                name: Living Room
+                label: "[[[ return `${entity.state} of 3 on` ]]]"
+              - type: grid
+                columns: 3
+                square: false
+                cards:
+                  - type: custom:button-card
+                    template: light_column
+                    entity: light.light_1
+                    name: Lamp one
+                  - type: custom:button-card
+                    template: light_column
+                    entity: light.light_2
+                    name: Lamp two
+                  - type: custom:button-card
+                    template: light_column
+                    entity: light.h619a
+                    name: LED strip
+                    variables: { rgb: "255,122,61", sub_on: "Amber" }
+              - type: custom:mushroom-chips-card
+                alignment: start
+                chips:
+                  - type: light
+                    entity: light.tv_ambilight
+                    content_info: name
+                    use_light_color: true
+                  - type: action
+                    icon: mdi:palette-outline
+                    tap_action:
+                      action: navigate
+                      navigation_path: "#living"
+                card_mod:
+                  style: |
+                    ha-card { --chip-height: 40px; --chip-border-radius: 14px; --chip-font-size: 13px; }
+
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root { position: relative; gap: 16px !important; padding: 20px; border-radius: 28px; overflow: hidden;
+                  background:
+                    {% if is_state('media_player.tv','on') %}
+                    radial-gradient(60% 50% at 20% 0%, rgba(124,183,255,{{ 0.28 if is_state('light.tv_ambilight','on') else 0.12 }}), transparent 70%),
+                    radial-gradient(60% 50% at 90% 10%, rgba(217,140,255,{{ 0.22 if is_state('light.tv_ambilight','on') else 0.08 }}), transparent 70%),
+                    {% endif %}
+                    rgba(34,27,23,.62);
+                  border: 1px solid rgba(255,226,200,.06); transition: background 500ms ease; }
+            cards:
+              - type: custom:button-card
+                entity: media_player.tv
+                show_icon: false
+                show_state: false
+                show_name: true
+                show_label: true
+                name: Television
+                label: >-
+                  [[[
+                    const s = entity.state === 'on' ? 'On' : (entity.state === 'off' ? 'Off' : entity.state);
+                    const app = entity.attributes.app_name || entity.attributes.source;
+                    return `Philips 65″ · ${s}${entity.state === 'on' && app ? ' · ' + app : ''}`;
+                  ]]]
+                tap_action:
+                  action: more-info
+                custom_fields:
+                  power: >-
+                    [[[ return `<ha-icon icon="mdi:power"></ha-icon>` ]]]
+                styles:
+                  card:
+                    - padding: 0
+                    - background: none
+                    - border: none
+                    - box-shadow: none
+                    - backdrop-filter: none
+                  grid:
+                    - grid-template-areas: '"n power" "l power"'
+                    - grid-template-columns: 1fr auto
+                  name:
+                    - justify-self: start
+                    - font-family: "'Instrument Serif', Georgia, serif"
+                    - font-size: 28px
+                  label:
+                    - justify-self: start
+                    - font-size: 13px
+                    - color: var(--secondary-text-color)
+                  custom_fields:
+                    power:
+                      - width: 52px
+                      - height: 52px
+                      - border-radius: 18px
+                      - display: flex
+                      - align-items: center
+                      - justify-content: center
+                      - background: "[[[ return entity.state === 'on' ? '#ff8a4c' : 'rgba(255,226,200,0.06)' ]]]"
+                      - color: "[[[ return entity.state === 'on' ? '#1a1410' : '#c9bbaf' ]]]"
+                      - box-shadow: "[[[ return entity.state === 'on' ? '0 12px 30px -10px #ff8a4c' : 'none' ]]]"
+                custom_field_tap_action:
+                  power:
+                    action: perform-action
+                    perform_action: media_player.toggle
+                    target: { entity_id: media_player.tv }
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: media_player.tv_3
+                    state: unavailable
+                card:
+                  type: custom:button-card
+                  entity: media_player.tv_3
+                  show_icon: true
+                  icon: mdi:alert-circle-outline
+                  show_name: true
+                  name: Android TV Remote needs re-pairing
+                  show_state: false
+                  tap_action:
+                    action: navigate
+                    navigation_path: /config/integrations/integration/androidtv_remote
+                  styles:
+                    card:
+                      - padding: 12px 14px
+                      - border-radius: 16px
+                      - background: rgba(255,107,94,0.10)
+                      - border: 1px solid rgba(255,107,94,0.22)
+                      - box-shadow: none
+                    grid:
+                      - grid-template-areas: '"i n"'
+                      - grid-template-columns: 22px 1fr
+                      - column-gap: 10px
+                    icon:
+                      - width: 18px
+                      - color: "#ffb3aa"
+                    name:
+                      - justify-self: start
+                      - font-size: 13px
+                      - color: "#ffb3aa"
+              - type: grid
+                columns: 3
+                square: false
+                cards:
+                  - type: custom:button-card
+                    name: Movie
+                    tap_action:
+                      action: perform-action
+                      perform_action: script.turn_on
+                      target: { entity_id: script.movie_time }
+                    styles:
+                      card: [height: 48px, border-radius: 14px, background: "rgba(255,138,76,0.16)", border: none, box-shadow: none]
+                      name: [font-size: 13px, font-weight: 700, color: "#ffb86b"]
+                  - type: custom:button-card
+                    entity: media_player.tv
+                    show_name: true
+                    show_icon: false
+                    name: "[[[ return entity.attributes.source || 'Source' ]]]"
+                    tap_action: { action: more-info }
+                    styles:
+                      card: [height: 48px, border-radius: 14px, background: "rgba(255,226,200,0.05)", border: none, box-shadow: none]
+                      name: [font-size: 13px, font-weight: 600, color: "#c9bbaf"]
+                  - type: custom:button-card
+                    entity: remote.tv_remote
+                    show_icon: false
+                    name: Remote
+                    tap_action: { action: more-info }
+                    styles:
+                      card: [height: 48px, border-radius: 14px, background: "rgba(255,226,200,0.05)", border: none, box-shadow: none]
+                      name: [font-size: 13px, font-weight: 600, color: "#c9bbaf"]
+
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root { gap: 14px !important; padding: 20px; border-radius: 28px;
+                  background: rgba(34,27,23,.62); border: 1px solid rgba(255,226,200,.06); }
+            cards:
+              - type: custom:button-card
+                template: panel_title
+                entity: binary_sensor.birou_overloaded
+                name: Desk
+                label: "[[[ return entity.state === 'on' ? '⚠ Overloaded' : 'MONITORING ONLY' ]]]"
+                styles:
+                  label:
+                    - letter-spacing: .08em
+                    - font-size: 12px
+                    - color: "[[[ return entity.state === 'on' ? '#ff6b5e' : 'var(--secondary-text-color)' ]]]"
+              - type: custom:button-card
+                entity: sensor.birou_current_consumption
+                show_icon: false
+                show_name: false
+                show_state: false
+                tap_action: { action: more-info }
+                custom_fields:
+                  w: >-
+                    [[[ return `<span class="n">${Math.round(Number(entity.state) || 0)}</span><span class="u">W now</span>` ]]]
+                styles:
+                  card: [padding: 0, background: none, border: none, box-shadow: none, backdrop-filter: none]
+                  grid:
+                    - grid-template-areas: '"w"'
+                    - justify-items: start
+                  custom_fields:
+                    w: [justify-self: start]
+                extra_styles: |
+                  .n { font-family: 'Instrument Serif', Georgia, serif; font-size: 64px; line-height: .9; letter-spacing: -.02em; color: var(--primary-text-color); }
+                  .u { margin-left: 6px; font-size: 16px; font-weight: 600; color: var(--secondary-text-color); }
+              - type: custom:mini-graph-card
+                entities:
+                  - entity: sensor.birou_current_consumption
+                    color: "#ff8a4c"
+                hours_to_show: 24
+                points_per_hour: 2
+                line_width: 2.5
+                smoothing: true
+                animate: true
+                height: 90
+                show:
+                  name: false
+                  icon: false
+                  state: false
+                  legend: false
+                  labels: false
+                  points: false
+                  extrema: false
+                  fill: fade
+                card_mod:
+                  style: |
+                    ha-card { background: none !important; border: none !important; box-shadow: none !important; backdrop-filter: none !important; padding: 0 !important; }
+              - type: grid
+                columns: 2
+                square: false
+                cards:
+                  - type: custom:button-card
+                    template: stat
+                    entity: sensor.birou_today_s_consumption
+                    name: Today
+                    label: "[[[ const c = states['sensor.desk_cost_today']?.state; return c && !isNaN(c) ? Number(c).toFixed(2) + ' lei' : '' ]]]"
+                  - type: custom:button-card
+                    template: stat
+                    entity: sensor.birou_this_month_s_consumption
+                    name: This month
+                    label: "[[[ const c = states['sensor.desk_cost_month']?.state; return c && !isNaN(c) ? Number(c).toFixed(2) + ' lei' : '' ]]]"
+
+      - type: grid
+        column_span: 3
+        cards:
+          - type: custom:mushroom-chips-card
+            alignment: start
+            grid_options: { columns: full }
+            chips:
+              - type: template
+                entity: sensor.unavailable_devices
+                icon: "{{ 'mdi:check-circle' if states('sensor.unavailable_devices') | int(0) == 0 else 'mdi:alert-circle' }}"
+                icon_color: "{{ 'green' if states('sensor.unavailable_devices') | int(0) == 0 else 'red' }}"
+                content: >-
+                  {% set n = states('sensor.unavailable_devices') | int(0) %}
+                  {{ 'All devices online' if n == 0 else n ~ ' offline · ' ~ (state_attr('sensor.unavailable_devices','names') or []) | join(', ') }}
+                tap_action: { action: more-info }
+              - type: template
+                entity: sensor.iphone_battery_level
+                icon: mdi:cellphone
+                icon_color: "{{ 'green' if states('sensor.iphone_battery_level') not in ['unavailable','unknown'] else 'grey' }}"
+                content: >-
+                  {% set b = states('sensor.iphone_battery_level') %}
+                  {{ 'iPhone ' ~ b ~ '%' if b not in ['unavailable','unknown'] else 'iPhone not reporting' }}
+              - type: template
+                entity: input_number.electricity_price
+                icon: mdi:cash
+                content: "{{ states('input_number.electricity_price') }} lei / kWh"
+                tap_action: { action: more-info }
+            card_mod:
+              style: |
+                ha-card { --chip-height: 40px; --chip-border-radius: 999px; --chip-font-size: 13px; --chip-padding: 0 14px; }
+
+      - type: grid
+        column_span: 3
+        cards:
+          - type: custom:bubble-card
+            card_type: pop-up
+            hash: "#living"
+            name: Living Room
+            icon: mdi:sofa-outline
+            show_header: true
+            grid_options: { columns: full }
+            cards:
+            - type: custom:mushroom-light-card
+              entity: light.light_1
+              name: Lamp one
+              show_brightness_control: true
+              show_color_temp_control: true
+              show_color_control: true
+              use_light_color: true
+            - type: custom:mushroom-light-card
+              entity: light.light_2
+              name: Lamp two
+              show_brightness_control: true
+              show_color_temp_control: true
+              show_color_control: true
+              use_light_color: true
+            - type: custom:mushroom-light-card
+              entity: light.h619a
+              name: LED strip
+              show_brightness_control: true
+              show_color_temp_control: true
+              show_color_control: true
+              use_light_color: true
+            - type: custom:mushroom-select-card
+              entity: select.light_1_light_preset
+              name: Lamp one preset
+            - type: custom:mushroom-select-card
+              entity: select.light_2_light_preset
+              name: Lamp two preset

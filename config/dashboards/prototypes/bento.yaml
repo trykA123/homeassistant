@@ -1,0 +1,295 @@
+# Dashboard: "Bento" — warm paper, ink black, one vermilion accent.
+# Design read: a light, glanceable "widget wall" for daytime. Big numerals, generous radii,
+# tiles of different weight so the eye lands on what matters first.
+# Flow: GLANCE (weather, lights, TV, desk, cost) -> SCENES -> LAMPS (colour, warmth, brightness).
+# Mobile-first for iPhone (393px); two columns on wide screens.
+
+button_card_templates:
+  bento_tile:
+    show_icon: false
+    show_name: false
+    show_state: false
+    styles:
+      card:
+        - padding: 18px
+        - min-height: 148px
+        - border-radius: 28px
+        - border: none
+        - box-shadow: 0 1px 0 rgba(22,20,15,.04), 0 14px 30px -20px rgba(70,45,10,.4)
+        - background: "[[[ return ({paper:'#fffdf8', ink:'#16140f', accent:'#ff5a1f', green:'#17543a'})[variables.tone] ]]]"
+        - color: "[[[ return ({paper:'#16140f', ink:'#f6f1e7', accent:'#ffffff', green:'#f2efe4'})[variables.tone] ]]]"
+      grid:
+        - grid-template-areas: '"t"'
+        - grid-template-rows: 1fr
+      custom_fields:
+        t:
+          - width: 100%
+          - height: 100%
+    extra_styles: |
+      ha-card { transition: transform 140ms ease; }
+      ha-card:active { transform: scale(.97); }
+      ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; display: inline-flex; }
+      #t { display: flex; flex-direction: column; justify-content: space-between; height: 100%; text-align: left; }
+      .k { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; opacity: .62; }
+      .k span { display: inline-flex; align-items: center; gap: 6px; }
+      .v { font-size: 44px; line-height: 1; font-weight: 800; letter-spacing: -.04em; margin-top: 14px; }
+      .v small { font-size: 18px; font-weight: 700; letter-spacing: -.01em; opacity: .7; margin-left: 4px; }
+      .s { font-size: 13px; font-weight: 600; opacity: .7; margin-top: 6px; }
+
+  bento_heading:
+    show_icon: false
+    show_state: false
+    tap_action: { action: none }
+    styles:
+      card:
+        - background: none
+        - border: none
+        - box-shadow: none
+        - padding: 12px 6px 0
+      name:
+        - justify-self: start
+        - font-size: 12px
+        - font-weight: 800
+        - letter-spacing: .16em
+        - text-transform: uppercase
+        - color: "#8a8578"
+
+  bento_pill:
+    show_icon: true
+    show_name: true
+    show_state: false
+    tap_action:
+      action: perform-action
+      perform_action: "[[[ return entity.entity_id.startsWith('script.') ? 'script.turn_on' : 'scene.turn_on' ]]]"
+      target:
+        entity_id: "[[[ return entity.entity_id ]]]"
+      haptic: success
+    styles:
+      card:
+        - height: 62px
+        - padding: 0 16px
+        - border-radius: 22px
+        - background: "#fffdf8"
+        - box-shadow: 0 1px 0 rgba(22,20,15,.04), 0 12px 24px -20px rgba(70,45,10,.45)
+      grid:
+        - grid-template-areas: '"i n"'
+        - grid-template-columns: 34px 1fr
+        - column-gap: 12px
+      img_cell:
+        - width: 34px
+        - height: 34px
+        - border-radius: 50%
+        - background: "[[[ return variables.c ]]]"
+        - display: flex
+        - align-items: center
+        - justify-content: center
+      icon:
+        - width: 18px
+        - color: "#ffffff"
+      name:
+        - justify-self: start
+        - font-size: 16px
+        - font-weight: 700
+        - color: "#16140f"
+        - letter-spacing: -.01em
+    extra_styles: |
+      ha-card { transition: transform 140ms ease; }
+      ha-card:active { transform: scale(.96); }
+
+title: Bento
+views:
+  - title: Today
+    path: today
+    icon: mdi:view-dashboard-variant
+    theme: Bento
+    type: sections
+    max_columns: 2
+    sections:
+      # ── 1 · GLANCE ──────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:button-card
+            template: bento_tile
+            variables: { tone: paper }
+            entity: weather.forecast_home
+            triggers_update: [sensor.home_greeting, person.claud, sun.sun]
+            tap_action: { action: more-info }
+            grid_options: { columns: full }
+            styles:
+              card:
+                - min-height: 176px
+            custom_fields:
+              t: >-
+                [[[
+                  const w = entity;
+                  const names = { sunny: 'Sunny', 'clear-night': 'Clear night', cloudy: 'Cloudy', partlycloudy: 'Partly cloudy', rainy: 'Rain', pouring: 'Heavy rain', snowy: 'Snow', fog: 'Fog', windy: 'Windy', lightning: 'Storm' };
+                  const icons = { sunny: 'weather-sunny', 'clear-night': 'weather-night', cloudy: 'weather-cloudy', partlycloudy: 'weather-partly-cloudy', rainy: 'weather-rainy', pouring: 'weather-pouring', snowy: 'weather-snowy', fog: 'weather-fog', windy: 'weather-windy', lightning: 'weather-lightning' };
+                  const t = w.attributes.temperature != null ? Math.round(w.attributes.temperature) : '--';
+                  const greet = states['sensor.home_greeting']?.state ?? 'Hello';
+                  const name = states['person.claud']?.attributes?.friendly_name ?? '';
+                  const date = new Date().toLocaleDateString([], {weekday: 'short', day: 'numeric', month: 'short'});
+                  const hum = w.attributes.humidity != null ? `${Math.round(w.attributes.humidity)}% humidity` : '';
+                  return `
+                    <div class="k"><span><ha-icon icon="mdi:${icons[w.state] || 'weather-partly-cloudy'}"></ha-icon>${names[w.state] || w.state}</span><span>${date}</span></div>
+                    <div><div class="v" style="font-size:72px">${t}<small style="font-size:30px">°C</small></div>
+                    <div class="s" style="font-size:16px">${greet}, ${name}${hum ? ' · ' + hum : ''}</div></div>`;
+                ]]]
+          - type: custom:button-card
+            template: bento_tile
+            variables: { tone: accent }
+            entity: light.living_room_lights
+            triggers_update: [sensor.living_room_lights_on]
+            tap_action: { action: toggle, haptic: medium }
+            hold_action: { action: more-info }
+            grid_options: { columns: 6 }
+            custom_fields:
+              t: >-
+                [[[
+                  const n = Number(states['sensor.living_room_lights_on']?.state || 0);
+                  return `
+                    <div class="k"><span><ha-icon icon="mdi:lightbulb-group"></ha-icon>Lights</span></div>
+                    <div><div class="v">${n}<small>on</small></div><div class="s">${n ? 'Tap to turn all off' : 'Tap to turn all on'}</div></div>`;
+                ]]]
+          - type: custom:button-card
+            template: bento_tile
+            variables: { tone: ink }
+            entity: media_player.tv
+            tap_action: { action: more-info }
+            grid_options: { columns: 6 }
+            custom_fields:
+              t: >-
+                [[[
+                  const on = entity.state !== 'off' && entity.state !== 'unavailable';
+                  return `
+                    <div class="k"><span><ha-icon icon="mdi:television"></ha-icon>TV</span></div>
+                    <div><div class="v">${on ? 'On' : 'Off'}</div><div class="s">Philips 65″${on && entity.attributes.source ? ' · ' + entity.attributes.source : ''}</div></div>`;
+                ]]]
+          - type: custom:mini-graph-card
+            entities:
+              - sensor.birou_current_consumption
+            name: Desk power
+            icon: mdi:desktop-tower-monitor
+            hours_to_show: 6
+            points_per_hour: 6
+            line_color: "#ff5a1f"
+            line_width: 3
+            height: 80
+            animate: true
+            show:
+              fill: fade
+              icon: true
+              legend: false
+              labels: false
+              points: false
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                ha-card { border-radius: 28px; background: #fffdf8; padding-top: 4px; }
+          - type: custom:button-card
+            template: bento_tile
+            variables: { tone: green }
+            entity: sensor.desk_cost_month
+            triggers_update: [sensor.desk_cost_today, input_number.electricity_price]
+            tap_action: { action: more-info }
+            grid_options: { columns: 6 }
+            custom_fields:
+              t: >-
+                [[[
+                  const today = states['sensor.desk_cost_today']?.state ?? '0';
+                  const price = states['input_number.electricity_price']?.state ?? '';
+                  return `
+                    <div class="k"><span><ha-icon icon="mdi:cash-multiple"></ha-icon>Desk · month</span></div>
+                    <div><div class="v" style="font-size:38px">${entity.state}<small>RON</small></div><div class="s">${today} today · ${price} /kWh</div></div>`;
+                ]]]
+          - type: custom:button-card
+            template: bento_tile
+            variables: { tone: paper }
+            entity: person.claud
+            tap_action: { action: more-info }
+            grid_options: { columns: 6 }
+            custom_fields:
+              t: >-
+                [[[
+                  const home = entity.state === 'home';
+                  return `
+                    <div class="k"><span><ha-icon icon="mdi:account"></ha-icon>Presence</span></div>
+                    <div><div class="v" style="color:${home ? '#17543a' : '#16140f'}">${home ? 'Home' : 'Away'}</div><div class="s">${entity.attributes.friendly_name ?? ''}</div></div>`;
+                ]]]
+
+      # ── 2 · SCENES + LAMPS ──────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:button-card
+            template: bento_heading
+            name: Scenes
+            grid_options: { columns: full }
+          - type: grid
+            columns: 2
+            square: false
+            grid_options: { columns: full }
+            cards:
+              - type: custom:button-card
+                template: bento_pill
+                entity: scene.evening
+                name: Evening
+                icon: mdi:weather-sunset
+                variables: { c: "#ff7a3d" }
+              - type: custom:button-card
+                template: bento_pill
+                entity: scene.relax
+                name: Relax
+                icon: mdi:sofa
+                variables: { c: "#6c5ce7" }
+              - type: custom:button-card
+                template: bento_pill
+                entity: scene.night
+                name: Night
+                icon: mdi:weather-night
+                variables: { c: "#16140f" }
+              - type: custom:button-card
+                template: bento_pill
+                entity: script.movie_time
+                name: Movie
+                icon: mdi:movie-open
+                variables: { c: "#d62839" }
+          - type: custom:button-card
+            template: bento_heading
+            name: Lamps
+            grid_options: { columns: full }
+          - type: custom:mushroom-light-card
+            entity: light.living_room_lights
+            name: All lights
+            icon: mdi:lightbulb-group
+            show_brightness_control: true
+            show_color_temp_control: true
+            show_color_control: true
+            use_light_color: true
+            collapsible_controls: false
+            grid_options: { columns: full }
+          - type: custom:mushroom-light-card
+            entity: light.light_1
+            name: Lamp 1
+            icon: mdi:floor-lamp
+            show_brightness_control: true
+            show_color_temp_control: true
+            show_color_control: true
+            use_light_color: true
+            grid_options: { columns: full }
+          - type: custom:mushroom-light-card
+            entity: light.light_2
+            name: Lamp 2
+            icon: mdi:floor-lamp
+            show_brightness_control: true
+            show_color_temp_control: true
+            show_color_control: true
+            use_light_color: true
+            grid_options: { columns: full }
+          - type: custom:mushroom-light-card
+            entity: light.h619a
+            name: LED strip
+            icon: mdi:led-strip-variant
+            show_brightness_control: true
+            show_color_temp_control: true
+            show_color_control: true
+            use_light_color: true
+            grid_options: { columns: full }

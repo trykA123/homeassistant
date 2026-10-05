@@ -1,0 +1,21 @@
+- id: desk_overload
+  alias: Desk Overload Warning
+  description: Notify when desk outlet is overloaded.
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.birou_overloaded
+      to: "on"
+      for: "00:00:30"
+      not_from:
+        - unavailable
+        - unknown
+  actions:
+    - action: persistent_notification.create
+      data:
+        notification_id: desk_overload
+        title: Desk Overload Warning
+        message: The desk outlet is overloaded. Check connected devices.
+    - action: notify.mobile_app_iphone
+      data:
+        title: Desk Overload
+        message: The desk outlet is overloaded. Check connected devices.

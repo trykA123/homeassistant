@@ -1,0 +1,672 @@
+# Dashboard: "Atelier" — The Chromatic Lighting Studio
+# Persona: Lighting Director / Creative Studio.
+# Obsidian smoked glass, live reactive chromatic glow, inline Kelvin & color pickers, and live color sync engine.
+# Mobile-optimized for iPhone 17 (393px width) & desktop.
+
+button_card_templates:
+  # Master Chromatic Header with dynamic room color aura and Sync Mode toggle
+  atelier_chroma_header:
+    show_icon: false
+    show_name: false
+    show_state: false
+    triggers_update:
+      - input_boolean.sync_light_colors
+      - sensor.living_room_lights_on
+      - light.light_1
+      - light.light_2
+      - light.h619a
+    custom_fields:
+      canvas: >-
+        [[[
+          const synced = states['input_boolean.sync_light_colors']?.state === 'on';
+          const onCount = Number(states['sensor.living_room_lights_on']?.state || 0);
+          
+          // Compute ambient gradient from living room lights
+          const getRgb = (id, fallback) => {
+            const rgb = states[id]?.attributes?.rgb_color;
+            return rgb ? `rgb(${rgb.join(',')})` : fallback;
+          };
+          const c1 = getRgb('light.light_1', '#7952ff');
+          const c2 = getRgb('light.light_2', '#00f0ff');
+          const c3 = getRgb('light.h619a', '#ff4785');
+          
+          return `
+            <div class="chroma-banner" style="--c1:${c1}; --c2:${c2}; --c3:${c3};">
+              <div class="glow-orb"></div>
+              <div class="header-content">
+                <div class="title-group">
+                  <span class="eyebrow">CHROMA STUDIO</span>
+                  <div class="title-row">
+                    <h1 class="main-title">Atelier</h1>
+                    <span class="count-badge">${onCount}/3 ACTIVE</span>
+                  </div>
+                  <span class="sub">${synced ? 'Colors Synchronized' : 'Independent Channels'}</span>
+                </div>
+                <div class="sync-switch ${synced ? 'active' : ''}" id="sync-btn">
+                  <div class="sync-indicator"></div>
+                  <div class="sync-text">
+                    <span class="label">COLOR SYNC</span>
+                    <span class="val">${synced ? 'ON' : 'OFF'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        ]]]
+    styles:
+      card:
+        - padding: 0
+        - background: none
+        - border: none
+        - box-shadow: none
+        - overflow: visible
+      grid:
+        - grid-template-areas: '"canvas"'
+      custom_fields:
+        canvas:
+          - width: 100%
+    extra_styles: |
+      .chroma-banner {
+        position: relative;
+        padding: 14px 16px;
+        border-radius: 20px;
+        background: rgba(18, 20, 30, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+      }
+      .glow-orb {
+        position: absolute;
+        top: -40px;
+        right: -40px;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--c1) 0%, var(--c2) 50%, var(--c3) 80%, transparent 100%);
+        opacity: 0.28;
+        filter: blur(32px);
+        pointer-events: none;
+      }
+      .header-content {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .title-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .eyebrow {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        color: #7e859b;
+        text-transform: uppercase;
+      }
+      .title-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .main-title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+        line-height: 1.1;
+      }
+      .count-badge {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #a0a6bd;
+        letter-spacing: 0.06em;
+      }
+      .sub {
+        font-size: 12px;
+        color: #9aa1b8;
+        font-weight: 500;
+      }
+      .sync-switch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        cursor: pointer;
+        transition: all 180ms ease;
+        flex-shrink: 0;
+      }
+      .sync-switch.active {
+        background: rgba(0, 240, 255, 0.14);
+        border-color: rgba(0, 240, 255, 0.5);
+        box-shadow: 0 0 16px -2px rgba(0, 240, 255, 0.4);
+      }
+      .sync-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #555b70;
+        transition: all 180ms ease;
+      }
+      .sync-switch.active .sync-indicator {
+        background: #00f0ff;
+        box-shadow: 0 0 8px #00f0ff;
+      }
+      .sync-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .sync-text .label {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        color: #8b92a8;
+      }
+      .sync-text .val {
+        font-size: 11px;
+        font-weight: 800;
+        color: #ffffff;
+        line-height: 1.1;
+      }
+      .sync-switch.active .sync-text .val {
+        color: #00f0ff;
+      }
+    custom_field_tap_action:
+      canvas:
+        action: perform-action
+        perform_action: input_boolean.toggle
+        target:
+          entity_id: input_boolean.sync_light_colors
+
+title: Atelier
+views:
+  - title: Studio
+    path: studio
+    icon: mdi:palette-swatch
+    theme: Atelier
+    type: sections
+    max_columns: 3
+    dense_section_placement: true
+    sections:
+      # ── Master Chromatic Stage & Global Controls ────
+      - type: grid
+        column_span: 3
+        cards:
+          - type: custom:button-card
+            template: atelier_chroma_header
+            grid_options: { columns: full }
+
+          # Master Living Room Harmonizer Bar
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  border-radius: 20px;
+                  background: rgba(18, 20, 30, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.living_room_lights
+                name: Master Living Room
+                icon: mdi:lightbulb-group-outline
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              
+              # Master Kelvin Warm/Cold Spectrum Selector
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2200K"
+                    icon: mdi:candle
+                    icon_color: amber
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2700K"
+                    icon: mdi:weather-sunset
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4000K"
+                    icon: mdi:white-balance-sunny
+                    icon_color: yellow
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6500K"
+                    icon: mdi:weather-sunny
+                    icon_color: blue
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { color_temp_kelvin: 6500 }
+
+              # Master Color Palette Quick Swatches
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: amber
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [255, 170, 40] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: red
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [255, 80, 110] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [0, 240, 255] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: purple
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.living_room_lights }
+                      data: { rgb_color: [170, 80, 255] }
+                  - type: template
+                    icon: mdi:palette-outline
+                    content: "Palette"
+                    tap_action:
+                      action: more-info
+                      entity: light.living_room_lights
+
+      # ── Lamp One (Chromatic Fixture Card) ────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  border-radius: 20px;
+                  background: rgba(18, 20, 30, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.light_1
+                name: Lamp One
+                icon: mdi:floor-lamp-outline
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              
+              # Warm/Cold Kelvin Preset Strip
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2200K"
+                    icon: mdi:candle
+                    icon_color: amber
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2700K"
+                    icon: mdi:weather-sunset
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4000K"
+                    icon: mdi:white-balance-sunny
+                    icon_color: yellow
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6500K"
+                    icon: mdi:weather-sunny
+                    icon_color: blue
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { color_temp_kelvin: 6500 }
+              
+              # Color Swatches + Color Picker Action
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: red
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { rgb_color: [255, 80, 110] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { rgb_color: [255, 160, 40] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { rgb_color: [0, 240, 255] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: purple
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_1 }
+                      data: { rgb_color: [170, 80, 255] }
+                  - type: template
+                    icon: mdi:palette-outline
+                    content: "Picker"
+                    tap_action:
+                      action: more-info
+                      entity: light.light_1
+
+      # ── Lamp Two (Chromatic Fixture Card) ────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  border-radius: 20px;
+                  background: rgba(18, 20, 30, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.light_2
+                name: Lamp Two
+                icon: mdi:floor-lamp-outline
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              
+              # Warm/Cold Kelvin Preset Strip
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2200K"
+                    icon: mdi:candle
+                    icon_color: amber
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2700K"
+                    icon: mdi:weather-sunset
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4000K"
+                    icon: mdi:white-balance-sunny
+                    icon_color: yellow
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6500K"
+                    icon: mdi:weather-sunny
+                    icon_color: blue
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { color_temp_kelvin: 6500 }
+              
+              # Color Swatches + Color Picker Action
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: red
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { rgb_color: [255, 80, 110] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { rgb_color: [255, 160, 40] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { rgb_color: [0, 240, 255] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: purple
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.light_2 }
+                      data: { rgb_color: [170, 80, 255] }
+                  - type: template
+                    icon: mdi:palette-outline
+                    content: "Picker"
+                    tap_action:
+                      action: more-info
+                      entity: light.light_2
+
+      # ── Govee LED Strip ────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  border-radius: 20px;
+                  background: rgba(18, 20, 30, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.h619a
+                name: Govee LED Strip
+                icon: mdi:led-strip-variant
+                show_brightness_control: true
+                show_color_temp_control: true
+                show_color_control: true
+                use_light_color: true
+              
+              # Warm/Cold Kelvin Preset Strip
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    content: "2200K"
+                    icon: mdi:candle
+                    icon_color: amber
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 2200 }
+                  - type: template
+                    content: "2700K"
+                    icon: mdi:weather-sunset
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 2700 }
+                  - type: template
+                    content: "4000K"
+                    icon: mdi:white-balance-sunny
+                    icon_color: yellow
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 4000 }
+                  - type: template
+                    content: "6500K"
+                    icon: mdi:weather-sunny
+                    icon_color: blue
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { color_temp_kelvin: 6500 }
+              
+              # Color Swatches + Color Picker Action
+              - type: custom:mushroom-chips-card
+                alignment: justify
+                chips:
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: red
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { rgb_color: [255, 80, 110] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: orange
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { rgb_color: [255, 160, 40] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: cyan
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { rgb_color: [0, 240, 255] }
+                  - type: template
+                    icon: mdi:circle
+                    icon_color: purple
+                    tap_action:
+                      action: perform-action
+                      perform_action: light.turn_on
+                      target: { entity_id: light.h619a }
+                      data: { rgb_color: [170, 80, 255] }
+                  - type: template
+                    icon: mdi:palette-outline
+                    content: "Picker"
+                    tap_action:
+                      action: more-info
+                      entity: light.h619a
+
+      # ── TV & Ambilight ────
+      - type: grid
+        cards:
+          - type: vertical-stack
+            grid_options: { columns: full }
+            card_mod:
+              style: |
+                #root {
+                  gap: 8px !important;
+                  padding: 12px 14px;
+                  border-radius: 20px;
+                  background: rgba(18, 20, 30, 0.75);
+                  border: 1px solid rgba(255, 255, 255, 0.08);
+                }
+            cards:
+              - type: custom:mushroom-light-card
+                entity: light.tv_ambilight
+                name: Philips TV Ambilight
+                icon: mdi:television-ambient-light
+                show_brightness_control: true
+                show_color_control: true
+                use_light_color: true
+              - type: custom:mushroom-media-player-card
+                entity: media_player.tv
+                name: Philips 65″ TV
+                icon: mdi:television
+                show_volume_level: true
+                volume_controls:
+                  - volume_buttons
+                  - volume_set
+                media_controls:
+                  - on_off
+                  - play_pause_stop

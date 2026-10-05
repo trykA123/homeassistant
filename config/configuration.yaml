@@ -3,18 +3,39 @@
 
 default_config:
 
+# Mobile-first dashboard with custom cards and theme.
+
+# Expose only the selected lights and TV to Apple Home and Siri.
+homekit:
+  - name: Home Assistant Lights
+    filter:
+      include_entities:
+        - light.light_1
+        - light.light_2
+        - light.h619a
+        - script.movie_time
+    entity_config:
+      light.h619a:
+        name: Govee LED Strip
+  - name: Philips TV
+    port: 21064
+    mode: accessory
+    filter:
+      include_entities:
+        - media_player.tv
+
 homeassistant:
   name: !secret home_name
   latitude: !secret home_latitude
   longitude: !secret home_longitude
   elevation: !secret home_elevation
   unit_system: metric
-  currency: EUR
+  currency: RON
   country: RO
   time_zone: Europe/Bucharest
-  # Published by TrueHL's Caddy (core/Caddyfile, section 7).
+  # Published by TrueHL's Caddy; the internal URL is reachable from iPhones on LAN.
   external_url: https://home.erzago.duckdns.org
-  internal_url: http://127.0.0.1:8123
+  internal_url: http://192.168.1.220:8123
   packages: !include_dir_named packages
 
 # HTTP settings are NOT configured here. Home Assistant migrated the http:
@@ -43,6 +64,8 @@ logger:
 
 frontend:
   themes: !include_dir_merge_named themes
+  extra_module_url:
+    - /hacsfiles/lovelace-card-mod/card-mod.js
 
 automation: !include_dir_merge_list automations
 script: !include scripts.yaml
