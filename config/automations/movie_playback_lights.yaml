@@ -1,23 +1,23 @@
 - id: movie_playback_lights
   alias: Lights follow playback
   description: >-
-    While a film or episode plays in Wholphin/Jellyfin on the TV after sunset,
+    While a film or episode plays in Wholphin on the TV after sunset,
     dim the LED strip and bedside lamp; raise them on pause; return to the
     Movie time levels when playback stops. Ceiling lights are never touched.
   mode: restart
   triggers:
     - id: playing
       trigger: state
-      entity_id: media_player.jellyfin_tv
+      entity_id: media_player.wholphin_tv
       to: playing
     - id: paused
       trigger: state
-      entity_id: media_player.jellyfin_tv
+      entity_id: media_player.wholphin_tv
       to: paused
       for: "00:00:02"
     - id: stopped
       trigger: state
-      entity_id: media_player.jellyfin_tv
+      entity_id: media_player.wholphin_tv
       from:
         - playing
         - paused
@@ -36,7 +36,7 @@
     - condition: template
       value_template: >-
         {{ trigger.id == 'stopped'
-           or state_attr('media_player.jellyfin_tv', 'media_content_type') in ['movie', 'tvshow', 'episode', 'video'] }}
+           or state_attr('media_player.wholphin_tv', 'media_content_type') in ['movie', 'tvshow', 'episode', 'video'] }}
   actions:
     - variables:
         levels:
