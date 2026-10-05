@@ -30,12 +30,12 @@ const tileTint = (l) => (l.on && l.rgb ? `--tint: rgb(${l.rgb.join(' ')})` : '')
 
 const tile = (l) => `<div class="tile" data-key="${l.id}" data-on="${l.on}" ${l.unavailable ? 'data-unavailable' : ''} style="--v:${l.level};${tileTint(l)}">
   <button class="tile-open" data-act="sheet" data-arg="light:${l.id}" aria-label="${esc(l.name)} settings"></button>
-  <span class="top"><button class="ic" data-act="toggle-light" data-arg="${l.id}" aria-pressed="${l.on}" aria-label="Turn ${esc(l.name)} ${l.on ? 'off' : 'on'}">${icon(l.icon)}</button><span class="val num">${l.unavailable ? 'Offline' : l.on ? `${l.level}%` : 'Off'}</span></span>
-  <span class="name"><b>${esc(l.name)}</b></span><span class="lvl"><i></i></span></div>`;
+  <span class="top"><button class="ic" data-act="toggle-light" data-arg="${l.id}" aria-pressed="${l.on}" aria-label="Turn ${esc(l.name)} ${l.on ? 'off' : 'on'}">${icon(l.icon)}</button><span class="val num">${l.unavailable ? 'Offline' : !l.on ? 'Off' : l.hasLevel ? `${l.level}%` : 'On'}</span></span>
+  <span class="mark" aria-hidden="true">${icon(l.icon)}</span><span class="name"><b>${esc(l.name)}</b></span><span class="lvl"><i></i></span></div>`;
 
 const deviceTile = ({ act, arg = '', ic, name, value, on }) => `<div class="tile" data-key="${act}-${arg}" data-on="${on}" style="--v:0">
   <button class="tile-open" data-act="${act}" data-arg="${arg}" aria-label="${esc(name)}"></button>
-  <span class="top"><span class="ic">${icon(ic)}</span><span class="val">${esc(value)}</span></span><span class="name"><b>${esc(name)}</b></span></div>`;
+  <span class="top"><span class="ic">${icon(ic)}</span><span class="val">${esc(value)}</span></span><span class="mark" aria-hidden="true">${icon(ic)}</span><span class="name"><b>${esc(name)}</b></span></div>`;
 
 function chips(ctx, room) {
   const out = [];

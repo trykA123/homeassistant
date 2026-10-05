@@ -38,6 +38,7 @@ function lightView(stateObj, pending) {
     name: stateObj.attributes.friendly_name ?? id,
     on,
     level: on ? level : 0,
+    hasLevel: brightness != null || pending != null,
     lastLevel: level || 50,
     unavailable: stateObj.state === 'unavailable',
     rgb: stateObj.attributes.rgb_color ?? null,
@@ -61,7 +62,7 @@ function roomStatus({ lights, tvOn, fan }) {
   return parts.filter(Boolean).join(' · ') || 'All quiet';
 }
 
-const appName = (appId) => APP_NAMES[appId] ?? appId ?? '';
+const appName = (appId) => APP_NAMES[appId] ?? '';
 
 function formatNumber(value, digits = 1) {
   const n = Number.parseFloat(value);
@@ -277,7 +278,7 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 button:focus-visible, [role="slider"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 ha-icon { --mdc-icon-size: 22px; display: inline-flex; }
 .num { font-variant-numeric: tabular-nums; }
-.stage { position: relative; height: 100dvh; overflow: hidden; background: #000; isolation: isolate; }
+.stage { position: relative; height: var(--stage-h, 100dvh); overflow: hidden; background: #000; isolation: isolate; overscroll-behavior: none; }
 
 .chrome { position: absolute; inset: 0 0 auto; z-index: var(--z-chrome); padding: var(--space-3) var(--space-5) var(--space-3); background: linear-gradient(180deg, oklch(0% 0 0 / .5), transparent); }
 .chrome::before { content: ""; position: absolute; inset: 0; z-index: -1; background: oklch(12% .008 60 / .7); backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4); border-bottom: 1px solid var(--glass-line); opacity: 0; transition: opacity var(--dur-ui) var(--ease-out); }
@@ -311,7 +312,7 @@ h1 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-52); line-heig
 .status { font-size: var(--fs-16); color: var(--ink-2); }
 
 .strip { display: flex; gap: var(--space-2); margin: var(--space-5) calc(var(--space-5) * -1) 0; padding: 0 var(--space-5); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--space-5); scrollbar-width: none; }
-.tile { position: relative; flex: 0 0 136px; height: 128px; scroll-snap-align: start; padding: var(--space-3) var(--space-3) var(--space-4); border-radius: var(--r-m); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;
+.tile { position: relative; flex: 0 0 148px; height: 140px; scroll-snap-align: start; padding: var(--space-3) var(--space-3) var(--space-4); border-radius: var(--r-m); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;
   background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3);
   transition: background var(--dur-ui) var(--ease-out), color var(--dur-ui) var(--ease-out), transform var(--dur-fast) var(--ease-out); user-select: none; -webkit-user-select: none; contain: layout paint; }
 .tile:has(.tile-open:active) { transform: scale(.97); }
@@ -320,19 +321,21 @@ h1 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-52); line-heig
 .tile-open { position: absolute; inset: 0; border-radius: inherit; z-index: 0; }
 .tile .top, .tile .name, .tile .lvl { position: relative; z-index: 1; pointer-events: none; }
 .tile .top { display: flex; justify-content: space-between; align-items: flex-start; }
-.tile .ic { pointer-events: auto; width: 40px; height: 40px; margin: -2px; border-radius: var(--r-full); display: grid; place-items: center; background: var(--glass-hi); transition: transform var(--dur-fast) var(--ease-out), background var(--dur-ui) var(--ease-out); }
+.tile .ic { pointer-events: auto; width: 52px; height: 52px; margin: -4px; border-radius: var(--r-full); display: grid; place-items: center; background: var(--glass-hi); --mdc-icon-size: 28px; transition: transform var(--dur-fast) var(--ease-out), background var(--dur-ui) var(--ease-out); }
 .tile .ic:active { transform: scale(.9); }
 .tile[data-on="true"] .ic { background: var(--tint, oklch(80% .12 75)); color: oklch(18% .02 60); box-shadow: 0 0 18px var(--tint, transparent); }
 .tile .val { font-size: var(--fs-13); font-weight: 600; }
 .tile b { display: block; font-size: var(--fs-14); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile .lvl { position: absolute; left: var(--space-3); right: var(--space-3); bottom: var(--space-2); height: 3px; border-radius: 3px; background: oklch(0% 0 0 / .12); overflow: hidden; }
 .tile .lvl i { display: block; height: 100%; width: calc(var(--v) * 1%); background: currentColor; opacity: .55; border-radius: 3px; transition: width var(--dur-ui) var(--ease-out); }
+.tile .mark { position: absolute; right: -14px; bottom: -18px; z-index: 0; pointer-events: none; --mdc-icon-size: 104px; color: currentColor; opacity: .16; transition: opacity var(--dur-ui) var(--ease-out), color var(--dur-ui) var(--ease-out); }
+.tile[data-on="true"] .mark { color: var(--tint, oklch(70% .13 70)); opacity: .32; }
 .strip-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); }
 .strip-foot .hint { margin: 0; }
 .hint { font-size: var(--fs-12); color: var(--ink-3); }
 
-.deck { position: relative; margin: var(--space-5) calc(var(--space-5) * -1) 0; padding: var(--space-2) var(--space-5) calc(env(safe-area-inset-bottom) + 96px); border-radius: var(--r-l) var(--r-l) 0 0; background: var(--deck); border-top: 1px solid var(--glass-line); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 -24px 48px oklch(0% 0 0 / .4), inset 0 1px 0 oklch(100% 0 0 / .08); min-height: 60cqh; }
-.deck::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 4px; background: var(--ink-3); opacity: .5; margin: 0 auto var(--space-2); }
+.deck { position: relative; margin: var(--space-6) calc(var(--space-5) * -1) 0; padding: var(--space-6) var(--space-5) calc(env(safe-area-inset-bottom) + 96px); background: linear-gradient(180deg, transparent, var(--deck) 72px); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); -webkit-mask-image: linear-gradient(180deg, transparent, #000 72px); mask-image: linear-gradient(180deg, transparent, #000 72px); min-height: 60cqh; }
+
 .sec { padding-block: var(--space-5); }
 .sec + .sec { border-top: 1px solid oklch(100% 0 0 / .08); }
 .sec h2 { margin: 0 0 var(--space-3); font-size: var(--fs-12); letter-spacing: .16em; text-transform: uppercase; font-weight: 600; color: var(--ink-3); }
@@ -508,12 +511,12 @@ const tileTint = (l) => (l.on && l.rgb ? `--tint: rgb(${l.rgb.join(' ')})` : '')
 
 const tile = (l) => `<div class="tile" data-key="${l.id}" data-on="${l.on}" ${l.unavailable ? 'data-unavailable' : ''} style="--v:${l.level};${tileTint(l)}">
   <button class="tile-open" data-act="sheet" data-arg="light:${l.id}" aria-label="${esc(l.name)} settings"></button>
-  <span class="top"><button class="ic" data-act="toggle-light" data-arg="${l.id}" aria-pressed="${l.on}" aria-label="Turn ${esc(l.name)} ${l.on ? 'off' : 'on'}">${icon(l.icon)}</button><span class="val num">${l.unavailable ? 'Offline' : l.on ? `${l.level}%` : 'Off'}</span></span>
-  <span class="name"><b>${esc(l.name)}</b></span><span class="lvl"><i></i></span></div>`;
+  <span class="top"><button class="ic" data-act="toggle-light" data-arg="${l.id}" aria-pressed="${l.on}" aria-label="Turn ${esc(l.name)} ${l.on ? 'off' : 'on'}">${icon(l.icon)}</button><span class="val num">${l.unavailable ? 'Offline' : !l.on ? 'Off' : l.hasLevel ? `${l.level}%` : 'On'}</span></span>
+  <span class="mark" aria-hidden="true">${icon(l.icon)}</span><span class="name"><b>${esc(l.name)}</b></span><span class="lvl"><i></i></span></div>`;
 
 const deviceTile = ({ act, arg = '', ic, name, value, on }) => `<div class="tile" data-key="${act}-${arg}" data-on="${on}" style="--v:0">
   <button class="tile-open" data-act="${act}" data-arg="${arg}" aria-label="${esc(name)}"></button>
-  <span class="top"><span class="ic">${icon(ic)}</span><span class="val">${esc(value)}</span></span><span class="name"><b>${esc(name)}</b></span></div>`;
+  <span class="top"><span class="ic">${icon(ic)}</span><span class="val">${esc(value)}</span></span><span class="mark" aria-hidden="true">${icon(ic)}</span><span class="name"><b>${esc(name)}</b></span></div>`;
 
 function chips(ctx, room) {
   const out = [];
@@ -773,7 +776,10 @@ class StageCard extends HTMLElement {
       onSend: (key, value, final) => this.sendFader(key, value, final),
     });
     setInterval(() => this.render(), 30_000);
-    new ResizeObserver(() => { this.drawCharts(true); this.placeInkBar(); }).observe(this.stage);
+    const fit = () => { const top = Math.max(0, this.getBoundingClientRect().top); this.stage.style.setProperty('--stage-h', `${window.innerHeight - top}px`); };
+    window.addEventListener('resize', fit);
+    requestAnimationFrame(fit);
+    new ResizeObserver(() => { fit(); this.drawCharts(true); this.placeInkBar(); }).observe(this);
   }
 
   ctx() {

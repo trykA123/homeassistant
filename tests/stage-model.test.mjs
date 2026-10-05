@@ -59,3 +59,14 @@ test('chartGeometry needs two points and rounds the max up', () => {
   assert.equal(g.ticks.at(-1).v, 100);
   assert.ok(g.line.startsWith('M'));
 });
+
+test('unknown TV packages get no app name', async () => {
+  const { appName } = await import('../stage-card/src/stage-model.js');
+  assert.equal(appName('org.droidtv.tvpowermanagerservice'), '');
+  assert.equal(appName('com.github.damontecres.wholphin'), 'Wholphin');
+});
+
+test('lights without a brightness report no level', () => {
+  assert.equal(lightView(light('on', undefined)).hasLevel, false);
+  assert.equal(lightView(light('on', 128)).hasLevel, true);
+});

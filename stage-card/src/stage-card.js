@@ -55,7 +55,10 @@ class StageCard extends HTMLElement {
       onSend: (key, value, final) => this.sendFader(key, value, final),
     });
     setInterval(() => this.render(), 30_000);
-    new ResizeObserver(() => { this.drawCharts(true); this.placeInkBar(); }).observe(this.stage);
+    const fit = () => { const top = Math.max(0, this.getBoundingClientRect().top); this.stage.style.setProperty('--stage-h', `${window.innerHeight - top}px`); };
+    window.addEventListener('resize', fit);
+    requestAnimationFrame(fit);
+    new ResizeObserver(() => { fit(); this.drawCharts(true); this.placeInkBar(); }).observe(this);
   }
 
   ctx() {

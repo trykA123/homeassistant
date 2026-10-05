@@ -36,6 +36,7 @@ export function lightView(stateObj, pending) {
     name: stateObj.attributes.friendly_name ?? id,
     on,
     level: on ? level : 0,
+    hasLevel: brightness != null || pending != null,
     lastLevel: level || 50,
     unavailable: stateObj.state === 'unavailable',
     rgb: stateObj.attributes.rgb_color ?? null,
@@ -59,7 +60,7 @@ export function roomStatus({ lights, tvOn, fan }) {
   return parts.filter(Boolean).join(' · ') || 'All quiet';
 }
 
-export const appName = (appId) => APP_NAMES[appId] ?? appId ?? '';
+export const appName = (appId) => APP_NAMES[appId] ?? '';
 
 export function formatNumber(value, digits = 1) {
   const n = Number.parseFloat(value);
