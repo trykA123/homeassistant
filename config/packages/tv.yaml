@@ -1,4 +1,37 @@
+rest_command:
+  tv_picture_contrast:
+    url: "https://192.168.1.136:1926/6/menuitems/settings/update"
+    method: post
+    authentication: digest
+    username: !secret philips_tv_username
+    password: !secret philips_tv_password
+    verify_ssl: false
+    content_type: "application/json"
+    payload: >-
+      {"values": [{"value": {"Nodeid": 2130968795, "Controllable": true, "Available": true, "data": {"value": {{ value | int }}}}}]}
+
 automation:
+  - id: tv_picture_by_sun
+    alias: "TV · softer picture after sunset"
+    mode: restart
+    triggers:
+      - trigger: sun
+        event: sunset
+      - trigger: sun
+        event: sunrise
+      - trigger: state
+        entity_id: media_player.tv
+        from: "off"
+        to: "on"
+    conditions:
+      - condition: state
+        entity_id: media_player.tv
+        state: "on"
+    actions:
+      - delay: "00:00:05"
+      - action: rest_command.tv_picture_contrast
+        data:
+          value: "{{ 52 if is_state('sun.sun', 'below_horizon') else 68 }}"
   - id: tv_skip_tuner_on_start
     alias: "TV · skip the tuner at power on"
     mode: single
