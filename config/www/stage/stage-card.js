@@ -363,7 +363,8 @@ h1 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-52); line-heig
 .pill-btn.solid { background: var(--ink); color: oklch(15% .01 60); border-color: transparent; }
 .pill-btn ha-icon { --mdc-icon-size: 18px; }
 .np { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--r-m); background: var(--deck-card); border: 1px solid oklch(100% 0 0 / .08); }
-.np-badge { width: 48px; height: 48px; flex: none; border-radius: var(--r-s); display: grid; place-items: center; background: linear-gradient(135deg, oklch(42% .08 60), oklch(26% .05 300)); color: var(--warm); }
+.np-badge { width: 48px; height: 64px; flex: none; border-radius: var(--r-s); overflow: hidden; display: grid; place-items: center; background: linear-gradient(135deg, oklch(42% .08 60), oklch(26% .05 300)); color: var(--warm); }
+.np-badge img { width: 100%; height: 100%; object-fit: cover; }
 .np b { display: block; font-size: var(--fs-16); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .np .muted { display: block; }
 .round { width: 44px; height: 44px; flex: none; border-radius: var(--r-full); display: grid; place-items: center; background: var(--glass-hi); border: 1px solid var(--glass-line); transition: transform var(--dur-fast) var(--ease-out); }
@@ -506,7 +507,17 @@ function tvView(ctx) {
   const tv = ctx.config.tv ?? {};
   const s = st(ctx, tv.entity);
   const app = st(ctx, tv.app_source)?.attributes.app_id;
-  return { on: isOn(s), app: appName(app), title: s?.attributes.media_title };
+  const np = st(ctx, tv.now_playing);
+  const active = np && ['playing', 'paused'].includes(np.state);
+  const a = active ? np.attributes : {};
+  const episode = a.media_series_title ? [a.media_season != null && `S${a.media_season}`, a.media_episode != null && `E${a.media_episode}`].filter(Boolean).join('') : '';
+  return {
+    on: isOn(s) || !!active,
+    app: active ? 'Wholphin' : appName(app),
+    title: active ? (a.media_series_title || a.media_title) : s?.attributes.media_title,
+    subtitle: active ? [episode, a.media_series_title ? a.media_title : '', np.state === 'paused' ? 'Paused' : ''].filter(Boolean).join(' · ') : '',
+    picture: active ? a.entity_picture : null,
+  };
 }
 
 const tileTint = (l) => (l.on && l.rgb ? `--tint: rgb(${l.rgb.join(' ')})` : '');
@@ -561,8 +572,8 @@ function nowPlayingSection(ctx) {
   if (!tv.on) return '';
   const home = !tv.app || tv.app === 'Home screen';
   return `<section class="sec"><h2>Now playing</h2><div class="np">
-    <span class="np-badge">${icon(home ? 'mdi:television' : 'mdi:play-circle-outline')}</span>
-    <span class="grow"><b>${esc(tv.title || (home ? 'Home screen' : tv.app))}</b><span class="muted">${esc(home ? 'TV is on' : `${tv.app} on TV`)}</span></span>
+    <span class="np-badge">${tv.picture ? `<img src="${esc(tv.picture)}" alt="">` : icon(home ? 'mdi:television' : 'mdi:play-circle-outline')}</span>
+    <span class="grow"><b>${esc(tv.title || (home ? 'Home screen' : tv.app))}</b><span class="muted">${esc(tv.subtitle || (home ? 'TV is on' : `${tv.app} on TV`))}</span></span>
     <button class="round" data-act="key" data-arg="MEDIA_PLAY_PAUSE" aria-label="Play or pause">${icon('mdi:play-pause')}</button>
     <button class="round" data-act="sheet" data-arg="tv" aria-label="Remote">${icon('mdi:remote-tv')}</button></div></section>`;
 }
@@ -758,7 +769,7 @@ class StageCard extends HTMLElement {
 
   watched() {
     const c = this.config;
-    const ids = [c.person, c.weather, c.tv?.entity, c.tv?.app_source, ...(c.scenes ?? []).map((s) => s.entity)];
+    const ids = [c.person, c.weather, c.tv?.entity, c.tv?.app_source, c.tv?.now_playing, ...(c.scenes ?? []).map((s) => s.entity)];
     for (const r of c.rooms) ids.push(...(r.lights ?? []).map((l) => l.entity), r.fan, ...(r.chips ?? []).map((x) => x.entity));
     if (c.energy) ids.push(...Object.values(c.energy));
     if (c.vacuum) ids.push(...Object.values(c.vacuum));

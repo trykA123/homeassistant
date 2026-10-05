@@ -14,6 +14,12 @@ homekit:
         - light.light_2
         - light.h619a
         - script.movie_time
+        - script.good_morning
+        - script.all_off
+        - scene.morning
+        - scene.evening
+        - scene.relax
+        - scene.night
     entity_config:
       light.h619a:
         name: Govee LED Strip

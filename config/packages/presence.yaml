@@ -1,0 +1,14 @@
+template:
+  - binary_sensor:
+      - name: Claud home
+        unique_id: claud_home_combined
+        device_class: presence
+        icon: mdi:home-account
+        state: >-
+          {% set ssid = states('sensor.iphone_ssid') %}
+          {{ is_state('person.claud', 'home')
+             or ssid.startswith('Erza') }}
+        attributes:
+          source: >-
+            {% set ssid = states('sensor.iphone_ssid') %}
+            {{ 'wifi' if ssid.startswith('Erza') else ('gps' if is_state('person.claud', 'home') else 'away') }}

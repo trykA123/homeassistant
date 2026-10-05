@@ -3,18 +3,38 @@ movie_time:
   icon: mdi:movie-open
   mode: restart
   sequence:
-    # Let the mood lighting respond at once, and restore it if the TV cannot wake.
+    # Movie lighting only after sunset: LED strip and bedside lamp on, ceilings off.
+    # Snapshot first so it can be restored if the TV cannot wake.
     - action: scene.create
       data:
         scene_id: movie_time_previous_strip
         snapshot_entities:
           - light.h619a
-    - action: light.turn_on
-      target:
-        entity_id: light.h619a
-      data:
-        brightness_pct: 25
-        rgb_color: [255, 115, 45]
+          - light.bedside_lamp
+          - light.light_1
+          - light.light_2
+    - if:
+        - condition: state
+          entity_id: sun.sun
+          state: below_horizon
+      then:
+        - action: light.turn_off
+          target:
+            entity_id:
+              - light.light_1
+              - light.light_2
+        - action: light.turn_on
+          target:
+            entity_id: light.h619a
+          data:
+            brightness_pct: 25
+            rgb_color: [255, 115, 45]
+        - action: light.turn_on
+          target:
+            entity_id: light.bedside_lamp
+          data:
+            brightness_pct: 15
+            color_temp_kelvin: 2200
     # Android TV Remote sends the TV's Power key without opening a Cast screen.
     - action: media_player.turn_on
       target:

@@ -27,6 +27,10 @@
             - condition: state
               entity_id: sun.sun
               state: below_horizon
+            - condition: template
+              value_template: >-
+                {% set t = state_attr('script.movie_time', 'last_triggered') %}
+                {{ t is none or (now() - t).total_seconds() > 180 }}
             - condition: state
               entity_id: person.claud
               state: home

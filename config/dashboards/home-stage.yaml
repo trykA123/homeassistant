@@ -39,6 +39,7 @@ views:
           entity: media_player.tv
           remote: remote.tv
           app_source: media_player.tv_3
+          now_playing: media_player.jellyfin_tv
           apps:
             - name: Wholphin
               id: com.github.damontecres.wholphin.MainActivity-com.github.damontecres.wholphin

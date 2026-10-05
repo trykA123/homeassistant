@@ -35,7 +35,7 @@ class StageCard extends HTMLElement {
 
   watched() {
     const c = this.config;
-    const ids = [c.person, c.weather, c.tv?.entity, c.tv?.app_source, ...(c.scenes ?? []).map((s) => s.entity)];
+    const ids = [c.person, c.weather, c.tv?.entity, c.tv?.app_source, c.tv?.now_playing, ...(c.scenes ?? []).map((s) => s.entity)];
     for (const r of c.rooms) ids.push(...(r.lights ?? []).map((l) => l.entity), r.fan, ...(r.chips ?? []).map((x) => x.entity));
     if (c.energy) ids.push(...Object.values(c.energy));
     if (c.vacuum) ids.push(...Object.values(c.vacuum));

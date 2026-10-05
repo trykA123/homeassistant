@@ -3,8 +3,8 @@
   description: Turn on evening scene when owner arrives home after sunset.
   triggers:
     - trigger: state
-      entity_id: person.claud
-      to: home
+      entity_id: binary_sensor.claud_home
+      to: "on"
       for: "00:02:00"
       not_from:
         - unavailable

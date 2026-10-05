@@ -23,7 +23,17 @@ function tvView(ctx) {
   const tv = ctx.config.tv ?? {};
   const s = st(ctx, tv.entity);
   const app = st(ctx, tv.app_source)?.attributes.app_id;
-  return { on: isOn(s), app: appName(app), title: s?.attributes.media_title };
+  const np = st(ctx, tv.now_playing);
+  const active = np && ['playing', 'paused'].includes(np.state);
+  const a = active ? np.attributes : {};
+  const episode = a.media_series_title ? [a.media_season != null && `S${a.media_season}`, a.media_episode != null && `E${a.media_episode}`].filter(Boolean).join('') : '';
+  return {
+    on: isOn(s) || !!active,
+    app: active ? 'Wholphin' : appName(app),
+    title: active ? (a.media_series_title || a.media_title) : s?.attributes.media_title,
+    subtitle: active ? [episode, a.media_series_title ? a.media_title : '', np.state === 'paused' ? 'Paused' : ''].filter(Boolean).join(' · ') : '',
+    picture: active ? a.entity_picture : null,
+  };
 }
 
 const tileTint = (l) => (l.on && l.rgb ? `--tint: rgb(${l.rgb.join(' ')})` : '');
@@ -78,8 +88,8 @@ function nowPlayingSection(ctx) {
   if (!tv.on) return '';
   const home = !tv.app || tv.app === 'Home screen';
   return `<section class="sec"><h2>Now playing</h2><div class="np">
-    <span class="np-badge">${icon(home ? 'mdi:television' : 'mdi:play-circle-outline')}</span>
-    <span class="grow"><b>${esc(tv.title || (home ? 'Home screen' : tv.app))}</b><span class="muted">${esc(home ? 'TV is on' : `${tv.app} on TV`)}</span></span>
+    <span class="np-badge">${tv.picture ? `<img src="${esc(tv.picture)}" alt="">` : icon(home ? 'mdi:television' : 'mdi:play-circle-outline')}</span>
+    <span class="grow"><b>${esc(tv.title || (home ? 'Home screen' : tv.app))}</b><span class="muted">${esc(tv.subtitle || (home ? 'TV is on' : `${tv.app} on TV`))}</span></span>
     <button class="round" data-act="key" data-arg="MEDIA_PLAY_PAUSE" aria-label="Play or pause">${icon('mdi:play-pause')}</button>
     <button class="round" data-act="sheet" data-arg="tv" aria-label="Remote">${icon('mdi:remote-tv')}</button></div></section>`;
 }

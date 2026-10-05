@@ -115,7 +115,8 @@ h1 { margin: var(--space-3) 0 var(--space-1); font-size: var(--fs-52); line-heig
 .pill-btn.solid { background: var(--ink); color: oklch(15% .01 60); border-color: transparent; }
 .pill-btn ha-icon { --mdc-icon-size: 18px; }
 .np { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--r-m); background: var(--deck-card); border: 1px solid oklch(100% 0 0 / .08); }
-.np-badge { width: 48px; height: 48px; flex: none; border-radius: var(--r-s); display: grid; place-items: center; background: linear-gradient(135deg, oklch(42% .08 60), oklch(26% .05 300)); color: var(--warm); }
+.np-badge { width: 48px; height: 64px; flex: none; border-radius: var(--r-s); overflow: hidden; display: grid; place-items: center; background: linear-gradient(135deg, oklch(42% .08 60), oklch(26% .05 300)); color: var(--warm); }
+.np-badge img { width: 100%; height: 100%; object-fit: cover; }
 .np b { display: block; font-size: var(--fs-16); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .np .muted { display: block; }
 .round { width: 44px; height: 44px; flex: none; border-radius: var(--r-full); display: grid; place-items: center; background: var(--glass-hi); border: 1px solid var(--glass-line); transition: transform var(--dur-fast) var(--ease-out); }

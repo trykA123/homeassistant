@@ -1,0 +1,21 @@
+- id: leave_home_undo
+  alias: Leave Home undo
+  description: The "Turn back on" button on the Leave Home notification restores what was switched off.
+  triggers:
+    - trigger: event
+      event_type: mobile_app_notification_action
+      event_data:
+        action: LEAVE_UNDO
+  conditions:
+    - condition: template
+      value_template: "{{ states.scene.before_leave is not none }}"
+  actions:
+    - action: scene.turn_on
+      target:
+        entity_id: scene.before_leave
+    - action: notify.mobile_app_iphone
+      data:
+        message: Lights restored.
+        data:
+          tag: leave_home
+  mode: single

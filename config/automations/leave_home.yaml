@@ -3,13 +3,22 @@
   description: Turn off lights and TV when owner leaves, with notification.
   triggers:
     - trigger: state
-      entity_id: person.claud
-      to: not_home
+      entity_id: binary_sensor.claud_home
+      to: "off"
       for: "00:02:00"
       not_from:
         - unavailable
         - unknown
   actions:
+    - action: scene.create
+      data:
+        scene_id: before_leave
+        snapshot_entities:
+          - light.light_1
+          - light.light_2
+          - light.h619a
+          - light.bedside_lamp
+          - fan.bedroom_fan
     - variables:
         turned_off: []
     - if:
@@ -80,3 +89,8 @@
           data:
             title: You left home
             message: "Turned off: {{ turned_off | join(', ') }}"
+            data:
+              tag: leave_home
+              actions:
+                - action: LEAVE_UNDO
+                  title: Turn back on
