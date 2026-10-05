@@ -11,6 +11,10 @@ views:
         person: person.claud
         weather: weather.forecast_home
         scenes:
+          - entity: scene.morning
+            name: Morning
+            icon: mdi:weather-sunset-up
+            swatch: "linear-gradient(135deg, oklch(90% .08 95), oklch(78% .09 220))"
           - entity: scene.evening
             name: Evening
             icon: mdi:weather-sunset
